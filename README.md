@@ -2,11 +2,10 @@
 
 A CLI for generating images through the [OpenRouter image generation API](https://openrouter.ai/docs/api/api-reference/images/generate-an-image).
 
-Built for AI coding agents. Agent harnesses (openclaw in particular) lag behind OpenRouter's
-image generation API — new models, parameters like `aspect_ratio`/`resolution`/`seed`, and the
-model catalog endpoints aren't exposed. `orimage` gives an agent a complete, current interface
-as a plain CLI: deterministic flags, compact JSON output, meaningful exit codes, images written
-straight to disk.
+Built for AI coding agents. Agent harnesses (openclaw in particular) don't have full,
+up-to-date support for OpenRouter's image generation API. `orimage` gives an agent a
+complete, current interface as a plain CLI: deterministic flags, compact JSON output,
+meaningful exit codes, images written straight to disk.
 
 ## Install
 
