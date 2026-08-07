@@ -74,3 +74,24 @@ sit between the two.
 
 Generated file paths print one per line on stdout; cost goes to stderr.
 Failures exit non-zero with the error on stderr.
+
+## Upgrading
+
+If a command fails in a way that suggests an outdated binary (an API
+rejection on a documented parameter, a flag `--help` says exists but
+the binary rejects), check `orgen version` against the latest release
+and upgrade:
+
+```
+curl -fsSL https://raw.githubusercontent.com/schmitthub/openrouter-generate/main/scripts/install.sh | sh
+```
+
+This skill is embedded in the binary, so after upgrading re-install it
+to pick up the current copy (`--force` replaces the existing skill
+directory):
+
+```
+orgen skill install --force <skills-directory>
+```
+
+Point it at the directory this skill is installed in.
