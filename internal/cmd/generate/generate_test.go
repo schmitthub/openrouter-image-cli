@@ -247,12 +247,17 @@ func Test_runGenerate(t *testing.T) {
 		}
 		require.NoError(t, runGenerate(t.Context(), opts))
 
+		// The API rejects bare strings — every reference must be the
+		// {"type":"image_url","image_url":{"url":...}} object form.
 		var req struct {
-			InputReferences []string `json:"input_references"`
+			InputReferences []map[string]any `json:"input_references"`
 		}
 		require.NoError(t, json.Unmarshal(gotBody, &req))
-		want := "data:image/png;base64," + base64.StdEncoding.EncodeToString(pngFixture())
-		assert.Equal(t, []string{want, "https://example.com/style.png"}, req.InputReferences)
+		wantDataURI := "data:image/png;base64," + base64.StdEncoding.EncodeToString(pngFixture())
+		assert.Equal(t, []map[string]any{
+			{"type": "image_url", "image_url": map[string]any{"url": wantDataURI}},
+			{"type": "image_url", "image_url": map[string]any{"url": "https://example.com/style.png"}},
+		}, req.InputReferences)
 	})
 
 	t.Run("api error surfaces", func(t *testing.T) {

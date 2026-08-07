@@ -222,7 +222,10 @@ func buildRequest(opts *GenerateOptions) openrouter.ImageRequest {
 		Resolution:        opts.Resolution,
 		Background:        opts.Background,
 		Seed:              nil,
-		InputReferences:   opts.InputReferences,
+		InputReferences:   nil,
+	}
+	for _, ref := range opts.InputReferences {
+		req.InputReferences = append(req.InputReferences, openrouter.NewInputReference(ref))
 	}
 	if opts.CompressionSet {
 		req.OutputCompression = &opts.OutputCompression

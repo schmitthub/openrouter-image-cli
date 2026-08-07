@@ -44,11 +44,13 @@ func Test_resolveInputReferences(t *testing.T) {
 		assert.Equal(t, in, refs)
 	})
 
-	t.Run("raw base64 passes through", func(t *testing.T) {
-		refs, err := resolveInputReferences([]string{"iVBORw0KGgoAAAANSUhEUg=="})
+	t.Run("raw base64 is promoted to a data URI", func(t *testing.T) {
+		raw := base64.StdEncoding.EncodeToString(pngFixture())
+
+		refs, err := resolveInputReferences([]string{raw})
 
 		require.NoError(t, err)
-		assert.Equal(t, []string{"iVBORw0KGgoAAAANSUhEUg=="}, refs)
+		assert.Equal(t, []string{"data:image/png;base64," + raw}, refs)
 	})
 
 	t.Run("directory errors", func(t *testing.T) {
@@ -111,7 +113,9 @@ func Test_resolveInputReferences(t *testing.T) {
 		refs, err := resolveInputReferences([]string{payload})
 
 		require.NoError(t, err)
-		assert.Equal(t, []string{payload}, refs)
+		// Promoted to a data URI; "x" bytes sniff as text/plain, and the
+		// charset parameter must carry no space inside a data URI.
+		assert.Equal(t, []string{"data:text/plain;charset=utf-8;base64," + payload}, refs)
 	})
 
 	t.Run("empty is nil", func(t *testing.T) {

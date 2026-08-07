@@ -41,8 +41,8 @@ func looksLikePath(ref string) bool {
 	return true
 }
 
-// resolveInputReferences expands local file paths into base64 data URIs.
-// HTTP(S) URLs, data URIs, and raw base64 values pass through unchanged.
+// resolveInputReferences expands local file paths and raw base64 values
+// into base64 data URIs. HTTP(S) URLs and data URIs pass through unchanged.
 func resolveInputReferences(refs []string) ([]string, error) {
 	if len(refs) == 0 {
 		return nil, nil
@@ -84,13 +84,23 @@ func resolveReference(ref string) (string, error) {
 	// A nonexistent path or raw base64 is all that remains; raw base64 is
 	// the only valid form. Report both underlying errors so the failure is
 	// never ambiguous.
-	if _, decodeErr := base64.StdEncoding.DecodeString(ref); decodeErr != nil {
+	decoded, decodeErr := base64.StdEncoding.DecodeString(ref)
+	if decodeErr != nil {
 		if statErr != nil {
 			return "", fmt.Errorf("input-reference %q: %w; not valid base64: %w", ref, statErr, decodeErr)
 		}
 		return "", fmt.Errorf("input-reference %q is not valid base64: %w", ref, decodeErr)
 	}
-	return ref, nil
+	// The API accepts only HTTP(S) URLs and data URIs, so bare base64 must
+	// be promoted to a data URI; sniff the payload for its media type.
+	return dataURI(detectMediaType("", decoded), ref), nil
+}
+
+// dataURI renders an RFC 2397 data URI. Sniffed media types can carry a
+// "; charset=..." parameter whose space is invalid inside a data URI, so
+// the space is stripped.
+func dataURI(mediaType, b64 string) string {
+	return "data:" + strings.ReplaceAll(mediaType, "; ", ";") + ";base64," + b64
 }
 
 // encodeFile reads a stat-confirmed file and renders it as a base64 data URI.
@@ -102,8 +112,7 @@ func encodeFile(ref string, info os.FileInfo) (string, error) {
 	if err != nil {
 		return "", fmt.Errorf("reading input-reference %q: %w", ref, err)
 	}
-	return "data:" + detectMediaType(ref, data) + ";base64," +
-		base64.StdEncoding.EncodeToString(data), nil
+	return dataURI(detectMediaType(ref, data), base64.StdEncoding.EncodeToString(data)), nil
 }
 
 // detectMediaType sniffs the file content, falling back to the extension
