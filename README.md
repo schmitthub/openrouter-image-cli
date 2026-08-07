@@ -79,6 +79,22 @@ orimage models info qwen/qwen-image-3 --json
 `models info` shows exactly which parameters each provider accepts (enum values, ranges) and
 what each image costs — check it before generating with an unfamiliar model.
 
+## Agent skill
+
+The binary embeds an [agent skill](https://docs.openclaw.ai/tools/skills) that teaches
+coding agents how to drive `orimage`. Install it into any skills directory:
+
+```sh
+orimage skill install ~/.agents/skills      # personal skills
+orimage skill install .agents/skills        # project skills
+```
+
+This writes the skill's directory, `orimage/`, into the given path (result:
+`<directory>/orimage/SKILL.md`), creating the path if needed. Everything else in
+the directory is left alone. If `<directory>/orimage` already exists the install
+fails; pass `--force` to delete and rewrite it — e.g. after upgrading `orimage`,
+since the skill's file layout can change between versions.
+
 ## Output
 
 - `generate` prints one `✓ <path>` line per image to stdout; cost goes to stderr, so stdout
