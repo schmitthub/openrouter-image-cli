@@ -458,6 +458,9 @@ func runGenerate(ctx context.Context, opts *GenerateOptions) error {
 	for _, p := range paths {
 		fmt.Fprintf(ios.Out, "%s %s\n", cs.SuccessIcon(), p)
 	}
+	if resp.ProviderName != "" {
+		fmt.Fprintf(ios.ErrOut, "%s\n", cs.Grayf("provider: %s", resp.ProviderName))
+	}
 	if resp.Usage.Cost > 0 {
 		fmt.Fprintf(ios.ErrOut, "%s\n", cs.Grayf("cost: $%.4f (%d tokens)",
 			resp.Usage.Cost, resp.Usage.TotalTokens))

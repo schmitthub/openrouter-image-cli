@@ -372,6 +372,7 @@ func Test_runGenerate(t *testing.T) {
 		var gotBody []byte
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			gotBody, _ = io.ReadAll(r.Body)
+			w.Header().Set("X-Provider-Name", "Test Provider")
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"created": 1,
 				"data": []map[string]string{{

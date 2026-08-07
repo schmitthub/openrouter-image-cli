@@ -116,14 +116,20 @@ type ImageResponse struct {
 	Created int64       `json:"created"`
 	Data    []ImageData `json:"data"`
 	Usage   Usage       `json:"usage"`
+	// ProviderName is the provider that served the generation, taken from
+	// the X-Provider-Name response header — the JSON body carries no
+	// provider identity. Empty when the header is absent.
+	ProviderName string `json:"-"`
 }
 
 // GenerateImage calls POST /images and returns the generated images.
 // Non-2xx responses return a *APIError.
 func (c *Client) GenerateImage(ctx context.Context, req ImageRequest) (*ImageResponse, error) {
 	var imageResp ImageResponse
-	if err := c.doJSON(ctx, http.MethodPost, "/images", req, &imageResp); err != nil {
+	header, err := c.doJSONHeader(ctx, http.MethodPost, "/images", req, &imageResp)
+	if err != nil {
 		return nil, err
 	}
+	imageResp.ProviderName = header.Get("X-Provider-Name")
 	return &imageResp, nil
 }
