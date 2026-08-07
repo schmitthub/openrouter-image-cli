@@ -1,4 +1,5 @@
-package config
+// Package get implements "orimage config get".
+package get
 
 import (
 	"fmt"
@@ -6,18 +7,18 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/schmitthub/openrouter-image-cli/internal/cmdutil"
-	appconfig "github.com/schmitthub/openrouter-image-cli/internal/config"
+	"github.com/schmitthub/openrouter-image-cli/internal/config"
 	"github.com/schmitthub/openrouter-image-cli/internal/iostreams"
 )
 
 type GetOptions struct {
 	IOStreams *iostreams.IOStreams
-	Config    func() (appconfig.Config, error)
+	Config    func() (config.Config, error)
 
 	Key string
 }
 
-func NewCmdConfigGet(f *cmdutil.Factory, runF func(*GetOptions) error) *cobra.Command {
+func NewCmdGet(f *cmdutil.Factory, runF func(*GetOptions) error) *cobra.Command {
 	opts := &GetOptions{
 		IOStreams: f.IOStreams,
 		Config:    f.Config,

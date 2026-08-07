@@ -323,6 +323,7 @@ func (s stubConfig) AspectRatio() string            { return s.aspect }
 func (s stubConfig) OutputFormat() string           { return s.format }
 func (s stubConfig) OutputCompression() (int, bool) { return s.compression, s.compressionSet }
 func (s stubConfig) Provider() map[string]any       { return nil }
+func (s stubConfig) AllKeys() []string              { return nil }
 func (s stubConfig) Get(string) (string, error)     { return "", nil }
 func (s stubConfig) Set(string, string) error       { return nil }
 func (s stubConfig) Save() error                    { return nil }

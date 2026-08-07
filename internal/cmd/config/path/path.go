@@ -1,4 +1,5 @@
-package config
+// Package path implements "orimage config path".
+package path
 
 import (
 	"fmt"
@@ -6,16 +7,16 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/schmitthub/openrouter-image-cli/internal/cmdutil"
-	appconfig "github.com/schmitthub/openrouter-image-cli/internal/config"
+	"github.com/schmitthub/openrouter-image-cli/internal/config"
 	"github.com/schmitthub/openrouter-image-cli/internal/iostreams"
 )
 
 type PathOptions struct {
 	IOStreams *iostreams.IOStreams
-	Config    func() (appconfig.Config, error)
+	Config    func() (config.Config, error)
 }
 
-func NewCmdConfigPath(f *cmdutil.Factory, runF func(*PathOptions) error) *cobra.Command {
+func NewCmdPath(f *cmdutil.Factory, runF func(*PathOptions) error) *cobra.Command {
 	opts := &PathOptions{
 		IOStreams: f.IOStreams,
 		Config:    f.Config,

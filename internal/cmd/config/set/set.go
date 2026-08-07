@@ -1,4 +1,5 @@
-package config
+// Package set implements "orimage config set".
+package set
 
 import (
 	"fmt"
@@ -6,7 +7,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/schmitthub/openrouter-image-cli/internal/cmdutil"
-	appconfig "github.com/schmitthub/openrouter-image-cli/internal/config"
+	"github.com/schmitthub/openrouter-image-cli/internal/config"
 	"github.com/schmitthub/openrouter-image-cli/internal/iostreams"
 )
 
@@ -15,13 +16,13 @@ const setArgCount = 2
 
 type SetOptions struct {
 	IOStreams *iostreams.IOStreams
-	Config    func() (appconfig.Config, error)
+	Config    func() (config.Config, error)
 
 	Key   string
 	Value string
 }
 
-func NewCmdConfigSet(f *cmdutil.Factory, runF func(*SetOptions) error) *cobra.Command {
+func NewCmdSet(f *cmdutil.Factory, runF func(*SetOptions) error) *cobra.Command {
 	opts := &SetOptions{
 		IOStreams: f.IOStreams,
 		Config:    f.Config,

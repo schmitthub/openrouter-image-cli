@@ -88,13 +88,19 @@ commands (version, help) still run.
 `aspect_ratio`, `output_format`, `output_compression`, `provider.<setting>`. File:
 `config.yaml` under `$ORIMAGE_CONFIG_DIR` or `<os.UserConfigDir>/orimage` (XDG).
 Precedence: flags > `ORIMAGE_*` env vars (viper `AutomaticEnv`, dots→underscores) >
-file. Two viper instances: `main` (file+env, serves reads) and `file` (file+explicit
-`Set`s only) so `Save` never persists env overrides. The Factory exposes it as
-`Config func() (config.Config, error)` via `sync.OnceValues` — lazy, memoized, and
-keyless commands never touch the filesystem. `generate` fills unset flags from config
-in `applyConfigDefaults`; `--model` is enforced in `validateOptions` (not
-`MarkFlagRequired`) so a configured default can satisfy it. The package never prints —
-errors return to callers.
+file. Lean on viper's own introspection: key enumeration is `AllKeys()` (scalar keys
+registered via `BindEnv`, NOT `SetDefault` — viper's `IsSet` treats defaults as set,
+which would break `OutputCompression()`'s set-detection), the file location is
+`ConfigFileUsed()`. Two viper instances: `main` (file+env, serves reads) and `file`
+(file+explicit `Set`s only) because viper's `WriteConfig` persists `AllSettings()`,
+which on an env-aware instance would write env overrides to disk (verified in viper
+v1.21 source). The Factory exposes it as `Config func() (config.Config, error)` via
+`sync.OnceValues` — lazy, memoized, keyless commands never touch the filesystem.
+`generate` fills unset flags from config in `applyConfigDefaults`; `--model` is
+enforced in `validateOptions` (not `MarkFlagRequired`) so a configured default can
+satisfy it. The package never prints — errors return to callers. Subcommands follow
+the repo convention: `internal/cmd/config` is the parent, `get`/`set`/`list`/`path`
+each live in their own subpackage.
 
 **`internal/build`** — `Version`/`Date`/`Revision` set via `-ldflags -X`, with a
 `debug.ReadBuildInfo()` fallback for `go install` builds.

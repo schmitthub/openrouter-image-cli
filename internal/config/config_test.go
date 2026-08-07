@@ -41,6 +41,20 @@ func TestNewMissingFile(t *testing.T) {
 	assert.Equal(t, filepath.Join(dir, "config.yaml"), cfg.Path())
 }
 
+func TestAllKeys(t *testing.T) {
+	cfg, dir := newInDir(t)
+	assert.Equal(t,
+		[]string{"aspect_ratio", "model", "output_compression", "output_format"},
+		cfg.AllKeys(), "empty config lists the bound scalar keys, sorted")
+
+	writeConfig(t, dir, "provider:\n  sort: price\nmodel: m\n")
+	reloaded, err := config.New()
+	require.NoError(t, err)
+	assert.Equal(t,
+		[]string{"aspect_ratio", "model", "output_compression", "output_format", "provider.sort"},
+		reloaded.AllKeys(), "file keys flatten into the list")
+}
+
 func TestLoadsFile(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv(config.EnvConfigDir, dir)
@@ -166,6 +180,18 @@ func TestSetRejectsUnknownKey(t *testing.T) {
 	assert.Contains(t, err.Error(), `unknown config key "bogus"`)
 }
 
+func TestGetAllowsFileKeys(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv(config.EnvConfigDir, dir)
+	writeConfig(t, dir, "custom_key: hello\n")
+
+	cfg, err := config.New()
+	require.NoError(t, err)
+	v, err := cfg.Get("custom_key")
+	require.NoError(t, err)
+	assert.Equal(t, "hello", v)
+}
+
 func TestSetRejectsNonIntCompression(t *testing.T) {
 	cfg, _ := newInDir(t)
 	err := cfg.Set("output_compression", "high")
@@ -184,16 +210,18 @@ func TestBareProviderKeyRejected(t *testing.T) {
 	require.Error(t, err)
 }
 
-func TestDirOverride(t *testing.T) {
-	t.Setenv(config.EnvConfigDir, "/custom/dir")
-	dir, err := config.Dir()
+func TestPathHonorsDirOverride(t *testing.T) {
+	t.Setenv(config.EnvConfigDir, t.TempDir())
+	cfg, err := config.New()
 	require.NoError(t, err)
-	assert.Equal(t, "/custom/dir", dir)
+	assert.Equal(t, filepath.Join(os.Getenv(config.EnvConfigDir), "config.yaml"), cfg.Path())
 }
 
-func TestDirDefaultsToUserConfigDir(t *testing.T) {
+func TestPathDefaultsToUserConfigDir(t *testing.T) {
 	t.Setenv(config.EnvConfigDir, "")
-	dir, err := config.Dir()
+	t.Setenv("XDG_CONFIG_HOME", t.TempDir()) // keep the real user config out of the test
+	cfg, err := config.New()
 	require.NoError(t, err)
-	assert.Equal(t, "orimage", filepath.Base(dir))
+	assert.Equal(t, "orimage", filepath.Base(filepath.Dir(cfg.Path())))
+	assert.Equal(t, "config.yaml", filepath.Base(cfg.Path()))
 }

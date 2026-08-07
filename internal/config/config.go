@@ -21,8 +21,7 @@ import (
 	"github.com/spf13/viper"
 )
 
-// Keys addressable in the config file, through ORIMAGE_* environment
-// variables, and by Get/Set. Provider settings nest under "provider."
+// Well-known keys. Provider routing settings nest under "provider."
 // (e.g. "provider.sort").
 const (
 	KeyModel             = "model"
@@ -58,9 +57,12 @@ type Config interface {
 	// Provider returns file-backed provider routing settings; individual
 	// environment overrides are readable via Get("provider.<setting>").
 	Provider() map[string]any
-	// Get returns the effective value for a known scalar key, "" when unset.
+	// AllKeys returns every addressable key — the well-known scalars plus
+	// anything present in the file — sorted.
+	AllKeys() []string
+	// Get returns the effective value for a scalar key, "" when unset.
 	Get(key string) (string, error)
-	// Set stages a value for a known key; Save persists it.
+	// Set stages a value for a key; Save persists it.
 	Set(key, value string) error
 	// Save writes file-backed and staged values to Path. Environment
 	// overrides are never written.
@@ -69,41 +71,34 @@ type Config interface {
 	Path() string
 }
 
-// Keys lists the top-level config keys.
-func Keys() []string {
-	return []string{KeyModel, KeyAspectRatio, KeyOutputFormat, KeyOutputCompression, KeyProvider}
+// scalarKeys are the top-level keys bound to ORIMAGE_* environment
+// variables at load time; nested provider.* keys are served by
+// viper's AutomaticEnv instead.
+func scalarKeys() []string {
+	return []string{KeyModel, KeyAspectRatio, KeyOutputFormat, KeyOutputCompression}
 }
 
-// Dir returns the directory holding the config file: $ORIMAGE_CONFIG_DIR
-// when set, else <user-config-dir>/orimage.
-func Dir() (string, error) {
+// filePath resolves the config file location: $ORIMAGE_CONFIG_DIR when
+// set, else <user-config-dir>/orimage.
+func filePath() (string, error) {
 	if dir := os.Getenv(EnvConfigDir); dir != "" {
-		return dir, nil
+		return filepath.Join(dir, fileName), nil
 	}
 	base, err := os.UserConfigDir()
 	if err != nil {
 		return "", fmt.Errorf("resolving user config dir: %w", err)
 	}
-	return filepath.Join(base, appDir), nil
-}
-
-// FilePath returns the config file location.
-func FilePath() (string, error) {
-	dir, err := Dir()
-	if err != nil {
-		return "", err
-	}
-	return filepath.Join(dir, fileName), nil
+	return filepath.Join(base, appDir, fileName), nil
 }
 
 // store is the viper-backed Config implementation.
 type store struct {
 	// main layers environment variables over the config file and serves
-	// all reads. file holds only file-backed and explicitly Set values,
-	// so Save never persists environment overrides.
+	// all reads. file holds only file-backed and explicitly Set values —
+	// viper's WriteConfig persists AllSettings(), which on an env-aware
+	// instance would write environment overrides to disk.
 	main *viper.Viper
 	file *viper.Viper
-	path string
 }
 
 var _ Config = (*store)(nil)
@@ -112,7 +107,7 @@ var _ Config = (*store)(nil)
 //
 //nolint:ireturn // constructor deliberately returns the mockable interface
 func New() (Config, error) {
-	path, err := FilePath()
+	path, err := filePath()
 	if err != nil {
 		return nil, err
 	}
@@ -120,7 +115,9 @@ func New() (Config, error) {
 	main.SetEnvPrefix(envPrefix)
 	main.SetEnvKeyReplacer(strings.NewReplacer(".", "_"))
 	main.AutomaticEnv()
-	for _, key := range Keys() {
+	for _, key := range scalarKeys() {
+		// BindEnv (not SetDefault) registers the key so IsSet and
+		// AllKeys see it without a default value poisoning IsSet.
 		if bindErr := main.BindEnv(key); bindErr != nil {
 			return nil, fmt.Errorf("binding environment for %s: %w", key, bindErr)
 		}
@@ -134,7 +131,7 @@ func New() (Config, error) {
 			return nil, readErr
 		}
 	}
-	return &store{main: main, file: file, path: path}, nil
+	return &store{main: main, file: file}, nil
 }
 
 func readConfig(v *viper.Viper, path string) error {
@@ -159,15 +156,21 @@ func (s *store) OutputCompression() (int, bool) {
 
 func (s *store) Provider() map[string]any { return s.main.GetStringMap(KeyProvider) }
 
+func (s *store) AllKeys() []string {
+	keys := s.main.AllKeys()
+	slices.Sort(keys)
+	return keys
+}
+
 func (s *store) Get(key string) (string, error) {
-	if err := validateScalarKey(key); err != nil {
+	if err := s.validateScalarKey(key); err != nil {
 		return "", err
 	}
 	return s.main.GetString(key), nil
 }
 
 func (s *store) Set(key, value string) error {
-	if err := validateScalarKey(key); err != nil {
+	if err := s.validateScalarKey(key); err != nil {
 		return err
 	}
 	var val any = value
@@ -184,25 +187,26 @@ func (s *store) Set(key, value string) error {
 }
 
 func (s *store) Save() error {
-	if err := os.MkdirAll(filepath.Dir(s.path), dirPerm); err != nil {
+	if err := os.MkdirAll(filepath.Dir(s.Path()), dirPerm); err != nil {
 		return fmt.Errorf("creating config dir: %w", err)
 	}
-	if err := s.file.WriteConfigAs(s.path); err != nil {
-		return fmt.Errorf("writing config %s: %w", s.path, err)
+	if err := s.file.WriteConfig(); err != nil {
+		return fmt.Errorf("writing config %s: %w", s.Path(), err)
 	}
 	return nil
 }
 
-func (s *store) Path() string { return s.path }
+func (s *store) Path() string { return s.main.ConfigFileUsed() }
 
-// validateScalarKey accepts known top-level keys and provider.<setting>
-// paths; the bare provider map is not scalar-addressable.
-func validateScalarKey(key string) error {
+// validateScalarKey accepts keys viper knows about (bound scalars plus
+// anything loaded or set) and not-yet-set provider.<setting> paths;
+// the bare provider map is not scalar-addressable.
+func (s *store) validateScalarKey(key string) error {
 	if key == KeyProvider {
 		return fmt.Errorf("%q holds a settings map: address %s.<setting> instead", KeyProvider, KeyProvider)
 	}
-	if slices.Contains(Keys(), key) || strings.HasPrefix(key, KeyProvider+".") {
+	if slices.Contains(s.main.AllKeys(), key) || strings.HasPrefix(key, KeyProvider+".") {
 		return nil
 	}
-	return fmt.Errorf("unknown config key %q (known keys: %s)", key, strings.Join(Keys(), ", "))
+	return fmt.Errorf("unknown config key %q (known keys: %s)", key, strings.Join(s.AllKeys(), ", "))
 }
