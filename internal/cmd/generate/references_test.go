@@ -55,6 +55,32 @@ func Test_resolveInputReferences(t *testing.T) {
 		assert.ErrorContains(t, err, "is a directory")
 	})
 
+	t.Run("symlink to file is followed", func(t *testing.T) {
+		link := filepath.Join(dir, "link.png")
+		require.NoError(t, os.Symlink(pngPath, link))
+
+		refs, err := resolveInputReferences([]string{link})
+
+		require.NoError(t, err)
+		want := "data:image/png;base64," + base64.StdEncoding.EncodeToString(pngFixture())
+		assert.Equal(t, []string{want}, refs)
+	})
+
+	t.Run("missing path errors", func(t *testing.T) {
+		_, err := resolveInputReferences([]string{filepath.Join(dir, "nope.png")})
+
+		assert.ErrorContains(t, err, "no such file and not valid base64")
+	})
+
+	t.Run("broken symlink errors", func(t *testing.T) {
+		link := filepath.Join(dir, "dangling")
+		require.NoError(t, os.Symlink(filepath.Join(dir, "gone.png"), link))
+
+		_, err := resolveInputReferences([]string{link})
+
+		assert.ErrorContains(t, err, "no such file and not valid base64")
+	})
+
 	t.Run("empty is nil", func(t *testing.T) {
 		refs, err := resolveInputReferences(nil)
 

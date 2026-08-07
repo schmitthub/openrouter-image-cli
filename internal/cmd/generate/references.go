@@ -50,7 +50,12 @@ func resolveReference(ref string) (string, error) {
 			base64.StdEncoding.EncodeToString(data), nil
 	}
 
-	// Not a file on disk: treat as raw base64 and let the API judge.
+	// Not a file on disk: raw base64 is the only remaining valid form.
+	// Rejecting anything else turns a typo'd path or broken symlink into
+	// a clear local error instead of a confusing API one.
+	if _, decodeErr := base64.StdEncoding.DecodeString(ref); decodeErr != nil {
+		return "", fmt.Errorf("input-reference %q: no such file and not valid base64", ref)
+	}
 	return ref, nil
 }
 
