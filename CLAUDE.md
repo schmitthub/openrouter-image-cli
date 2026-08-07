@@ -8,7 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Module path `github.com/schmitthub/openrouter-image-cli`, binary `orimage`.
 
 Working commands: `generate` (image generation), `models list` / `models info`
-(model catalog), `version`.
+(model catalog), `skill install` (write the embedded agent skill — see
+`internal/skill` — into a skills directory), `version`.
 
 ## Commands
 
