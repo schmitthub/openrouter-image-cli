@@ -58,9 +58,10 @@ omit the flag:
 orimage config set model google/gemini-2.5-flash-image
 ```
 
-`orimage config --help` lists the keys; `config list` shows current
-values. Explicit flags always override saved defaults, and `ORIMAGE_*`
-environment variables sit between the two.
+`orimage config list` shows every key with its current value; see
+`orimage config --help` for the full command surface. Explicit flags
+always override saved defaults, and `ORIMAGE_*` environment variables
+sit between the two.
 
 Generated file paths print one per line on stdout; cost goes to stderr.
 Failures exit non-zero with the error on stderr.
