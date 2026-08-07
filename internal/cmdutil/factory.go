@@ -1,6 +1,7 @@
 package cmdutil
 
 import (
+	"github.com/schmitthub/openrouter-image-cli/internal/config"
 	"github.com/schmitthub/openrouter-image-cli/internal/iostreams"
 	"github.com/schmitthub/openrouter-image-cli/internal/openrouter"
 )
@@ -13,4 +14,8 @@ type Factory struct {
 	// credentials are available. Deferred behind a func so commands that
 	// never touch the API (version, help) work without a key.
 	OpenRouter func() (*openrouter.Client, error)
+
+	// Config lazily loads persisted settings; the loaded value is
+	// memoized, so repeated calls share one Config.
+	Config func() (config.Config, error)
 }

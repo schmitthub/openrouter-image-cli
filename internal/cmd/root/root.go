@@ -5,6 +5,7 @@ import (
 
 	"github.com/schmitthub/openrouter-image-cli/internal/cmdutil"
 
+	configCmd "github.com/schmitthub/openrouter-image-cli/internal/cmd/config"
 	generateCmd "github.com/schmitthub/openrouter-image-cli/internal/cmd/generate"
 	modelsCmd "github.com/schmitthub/openrouter-image-cli/internal/cmd/models"
 	skillCmd "github.com/schmitthub/openrouter-image-cli/internal/cmd/skill"
@@ -32,6 +33,7 @@ func NewCmdRoot(f *cmdutil.Factory, version, buildDate string) (*cobra.Command, 
 	cmd.PersistentFlags().Bool("help", false, "Show help for command")
 
 	cmd.AddCommand(versionCmd.NewCmdVersion(f, version, buildDate))
+	cmd.AddCommand(configCmd.NewCmdConfig(f))
 	cmd.AddCommand(generateCmd.NewCmdGenerate(f, nil))
 	cmd.AddCommand(modelsCmd.NewCmdModels(f))
 	cmd.AddCommand(skillCmd.NewCmdSkill(f))

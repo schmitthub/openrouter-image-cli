@@ -10,6 +10,7 @@ import (
 	"github.com/spf13/cobra"
 
 	"github.com/schmitthub/openrouter-image-cli/internal/cmdutil"
+	"github.com/schmitthub/openrouter-image-cli/internal/config"
 	"github.com/schmitthub/openrouter-image-cli/internal/iostreams"
 	"github.com/schmitthub/openrouter-image-cli/internal/openrouter"
 )
@@ -40,6 +41,7 @@ const (
 type GenerateOptions struct {
 	IOStreams  *iostreams.IOStreams
 	OpenRouter func() (*openrouter.Client, error)
+	Config     func() (config.Config, error)
 
 	// Request options (see openrouter.ImageRequest).
 	Model             string
@@ -67,6 +69,7 @@ func NewCmdGenerate(f *cmdutil.Factory, runF func(*GenerateOptions) error) *cobr
 	opts := &GenerateOptions{
 		IOStreams:         f.IOStreams,
 		OpenRouter:        f.OpenRouter,
+		Config:            f.Config,
 		Model:             "",
 		Prompt:            "",
 		N:                 0,
@@ -96,6 +99,9 @@ them to disk. Requires the OPENROUTER_API_KEY environment variable.`,
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.SeedSet = cmd.Flags().Changed("seed")
 			opts.CompressionSet = cmd.Flags().Changed("output-compression")
+			if err := applyConfigDefaults(cmd, opts); err != nil {
+				return err
+			}
 			if err := validateOptions(opts); err != nil {
 				return err
 			}
@@ -107,7 +113,7 @@ them to disk. Requires the OPENROUTER_API_KEY environment variable.`,
 	}
 
 	fl := cmd.Flags()
-	fl.StringVarP(&opts.Model, "model", "m", "", "Image model identifier (required)")
+	fl.StringVarP(&opts.Model, "model", "m", "", "Image model identifier (required unless a default is configured)")
 	fl.StringVarP(&opts.Prompt, "prompt", "p", "", "Text description of the desired image (required)")
 	fl.StringVarP(&opts.Out, "out", "o", "", "Output file path (default: orimage-<timestamp>.<ext>)")
 	fl.IntVarP(&opts.N, "count", "n", 0, "Number of images to generate (1-10)")
@@ -122,16 +128,51 @@ them to disk. Requires the OPENROUTER_API_KEY environment variable.`,
 	fl.StringArrayVar(&opts.InputReferences, "input-reference", nil,
 		"Reference image (file path, URL, or base64) for image-to-image; repeatable, max 16")
 
-	_ = cmd.MarkFlagRequired("model")
 	_ = cmd.MarkFlagRequired("prompt")
 	_ = cmd.MarkFlagFilename("out")
 
 	return cmd
 }
 
+// applyConfigDefaults fills options the user left unset from persisted
+// config. Flags always win; viper already ranks environment variables
+// over file entries.
+func applyConfigDefaults(cmd *cobra.Command, opts *GenerateOptions) error {
+	if opts.Config == nil {
+		return nil
+	}
+	cfg, err := opts.Config()
+	if err != nil {
+		return fmt.Errorf("loading config: %w", err)
+	}
+	flags := cmd.Flags()
+	defaults := []struct {
+		flag string
+		dst  *string
+		get  func() string
+	}{
+		{flag: "model", dst: &opts.Model, get: cfg.Model},
+		{flag: "aspect-ratio", dst: &opts.AspectRatio, get: cfg.AspectRatio},
+		{flag: "output-format", dst: &opts.OutputFormat, get: cfg.OutputFormat},
+	}
+	for _, d := range defaults {
+		if v := d.get(); v != "" && !flags.Changed(d.flag) {
+			*d.dst = v
+		}
+	}
+	if n, ok := cfg.OutputCompression(); ok && !flags.Changed("output-compression") {
+		opts.OutputCompression = n
+		opts.CompressionSet = true
+	}
+	return nil
+}
+
 // validateOptions rejects values the API would refuse, before any network
 // call. Errors are FlagErrors so the root command prints usage.
 func validateOptions(opts *GenerateOptions) error {
+	if opts.Model == "" {
+		return cmdutil.FlagErrorf(`required flag(s) "model" not set`)
+	}
 	enums := []struct {
 		name    string
 		value   string

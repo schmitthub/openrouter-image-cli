@@ -1,6 +1,10 @@
 package cmdutil
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/spf13/cobra"
+)
 
 // FlagErrorf returns a new FlagError that wraps an error produced by
 // fmt.Errorf(format, args...).
@@ -24,4 +28,15 @@ func (fe *FlagError) Error() string {
 
 func (fe *FlagError) Unwrap() error {
 	return fe.err
+}
+
+// ExactArgs is cobra.ExactArgs returning a *FlagError, so failures
+// print the usage string.
+func ExactArgs(n int, msg string) cobra.PositionalArgs {
+	return func(_ *cobra.Command, args []string) error {
+		if len(args) != n {
+			return FlagErrorf("%s (got %d argument(s))", msg, len(args))
+		}
+		return nil
+	}
 }
