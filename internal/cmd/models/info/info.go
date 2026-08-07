@@ -25,6 +25,8 @@ func NewCmdInfo(f *cmdutil.Factory, runF func(*InfoOptions) error) *cobra.Comman
 	opts := &InfoOptions{
 		IOStreams:  f.IOStreams,
 		OpenRouter: f.OpenRouter,
+		Model:      "",
+		JSON:       false,
 	}
 
 	cmd := &cobra.Command{

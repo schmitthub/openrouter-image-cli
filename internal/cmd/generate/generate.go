@@ -65,8 +65,23 @@ type GenerateOptions struct {
 
 func NewCmdGenerate(f *cmdutil.Factory, runF func(*GenerateOptions) error) *cobra.Command {
 	opts := &GenerateOptions{
-		IOStreams:  f.IOStreams,
-		OpenRouter: f.OpenRouter,
+		IOStreams:         f.IOStreams,
+		OpenRouter:        f.OpenRouter,
+		Model:             "",
+		Prompt:            "",
+		N:                 0,
+		Size:              "",
+		Quality:           "",
+		OutputFormat:      "",
+		OutputCompression: 0,
+		CompressionSet:    false,
+		AspectRatio:       "",
+		Resolution:        "",
+		Background:        "",
+		Seed:              0,
+		SeedSet:           false,
+		InputReferences:   nil,
+		Out:               "",
 	}
 
 	cmd := &cobra.Command{
@@ -155,16 +170,18 @@ func validateOptions(opts *GenerateOptions) error {
 // buildRequest translates CLI options into the wire request.
 func buildRequest(opts *GenerateOptions) openrouter.ImageRequest {
 	req := openrouter.ImageRequest{
-		Model:           opts.Model,
-		Prompt:          opts.Prompt,
-		N:               opts.N,
-		Size:            opts.Size,
-		Quality:         opts.Quality,
-		OutputFormat:    opts.OutputFormat,
-		AspectRatio:     opts.AspectRatio,
-		Resolution:      opts.Resolution,
-		Background:      opts.Background,
-		InputReferences: opts.InputReferences,
+		Model:             opts.Model,
+		Prompt:            opts.Prompt,
+		N:                 opts.N,
+		Size:              opts.Size,
+		Quality:           opts.Quality,
+		OutputFormat:      opts.OutputFormat,
+		OutputCompression: nil,
+		AspectRatio:       opts.AspectRatio,
+		Resolution:        opts.Resolution,
+		Background:        opts.Background,
+		Seed:              nil,
+		InputReferences:   opts.InputReferences,
 	}
 	if opts.CompressionSet {
 		req.OutputCompression = &opts.OutputCompression
