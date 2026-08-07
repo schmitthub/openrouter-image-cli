@@ -105,7 +105,7 @@ them to disk. Requires the OPENROUTER_API_KEY environment variable.`,
 	fl.StringVar(&opts.Background, "background", "", "Background: auto|transparent|opaque")
 	fl.Int64Var(&opts.Seed, "seed", 0, "Seed for deterministic generation")
 	fl.StringArrayVar(&opts.InputReferences, "input-reference", nil,
-		"Reference image (URL or base64) for image-to-image; repeatable, max 16")
+		"Reference image (file path, URL, or base64) for image-to-image; repeatable, max 16")
 
 	_ = cmd.MarkFlagRequired("model")
 	_ = cmd.MarkFlagRequired("prompt")
@@ -142,6 +142,10 @@ func validateOptions(opts *GenerateOptions) error {
 		return cmdutil.FlagErrorf(
 			"invalid output-compression: %d (expected 0-%d)", opts.OutputCompression, maxCompression)
 	}
+	if len(opts.InputReferences) > maxInputReferences {
+		return cmdutil.FlagErrorf(
+			"too many input-reference values: %d (max %d)", len(opts.InputReferences), maxInputReferences)
+	}
 	return nil
 }
 
@@ -173,6 +177,12 @@ func runGenerate(ctx context.Context, opts *GenerateOptions) error {
 	if err != nil {
 		return err
 	}
+
+	refs, err := resolveInputReferences(opts.InputReferences)
+	if err != nil {
+		return err
+	}
+	opts.InputReferences = refs
 
 	ios := opts.IOStreams
 	var resp *openrouter.ImageResponse

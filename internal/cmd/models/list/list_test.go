@@ -28,8 +28,9 @@ const listBody = `{"data": [
 ]}`
 
 func Test_runList(t *testing.T) {
-	t.Run("table output", func(t *testing.T) {
-		ios, _, stdout, _ := iostreams.Test()
+	t.Run("table output on tty", func(t *testing.T) {
+		ios, _, stdout, stderr := iostreams.Test()
+		ios.SetStdoutTTY(true)
 		opts := &ListOptions{IOStreams: ios, OpenRouter: fakeClient(t, listBody)}
 
 		require.NoError(t, runList(t.Context(), opts))
@@ -38,7 +39,21 @@ func Test_runList(t *testing.T) {
 		assert.Contains(t, out, "ID")
 		assert.Contains(t, out, "a/one")
 		assert.Contains(t, out, "text,image")
-		assert.Contains(t, out, "true")
+		assert.Contains(t, out, "✓")
+		assert.Contains(t, stderr.String(), "2 models")
+	})
+
+	t.Run("plain output when piped", func(t *testing.T) {
+		ios, _, stdout, stderr := iostreams.Test()
+		opts := &ListOptions{IOStreams: ios, OpenRouter: fakeClient(t, listBody)}
+
+		require.NoError(t, runList(t.Context(), opts))
+
+		out := stdout.String()
+		assert.NotContains(t, out, "ID\t")
+		assert.Contains(t, out, "a/one\tOne\ttext\ttrue\n")
+		assert.Contains(t, out, "b/two\tTwo\ttext,image\tfalse\n")
+		assert.Empty(t, stderr.String())
 	})
 
 	t.Run("json output", func(t *testing.T) {
