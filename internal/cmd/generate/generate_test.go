@@ -43,14 +43,33 @@ func TestNewCmdGenerate(t *testing.T) {
 			cli: `--model m --prompt p --out img.png -n 3 --size 2K --quality high ` +
 				`--output-format webp --output-compression 80 --aspect-ratio 16:9 ` +
 				`--resolution 2K --background transparent --seed 42 ` +
-				`--input-reference https://example.com/a.png`,
+				`--input-reference https://example.com/a.png ` +
+				`--provider-sort price --provider-order fal,replicate --provider-only fal ` +
+				`--provider-ignore openai --no-provider-fallbacks ` +
+				`--provider-option black-forest-labs.steps=40 ` +
+				`--provider-option black-forest-labs.guidance=3.5 ` +
+				`--provider-option google-vertex.cachedContent=projects/x`,
 			wantsOpts: GenerateOptions{
 				Model: "m", Prompt: "p", Out: "img.png", N: 3, Size: "2K",
 				Quality: "high", OutputFormat: "webp",
 				OutputCompression: 80, CompressionSet: true,
 				AspectRatio: "16:9", Resolution: "2K", Background: "transparent",
 				Seed: 42, SeedSet: true,
-				InputReferences: []string{"https://example.com/a.png"},
+				InputReferences:     []string{"https://example.com/a.png"},
+				ProviderSort:        "price",
+				ProviderOrder:       []string{"fal", "replicate"},
+				ProviderOnly:        []string{"fal"},
+				ProviderIgnore:      []string{"openai"},
+				NoProviderFallbacks: true, FallbacksSet: true,
+				ProviderOptions: []string{
+					"black-forest-labs.steps=40",
+					"black-forest-labs.guidance=3.5",
+					"google-vertex.cachedContent=projects/x",
+				},
+				ProviderOptionValues: map[string]map[string]any{
+					"black-forest-labs": {"steps": int64(40), "guidance": 3.5},
+					"google-vertex":     {"cachedContent": "projects/x"},
+				},
 			},
 		},
 		{
@@ -101,6 +120,30 @@ func TestNewCmdGenerate(t *testing.T) {
 			wantsErr: true,
 			errMsg:   "invalid output-compression: 101",
 		},
+		{
+			name:     "invalid provider sort",
+			cli:      `-m m -p p --provider-sort cheapest`,
+			wantsErr: true,
+			errMsg:   "invalid provider-sort: cheapest",
+		},
+		{
+			name:     "provider option missing value",
+			cli:      `-m m -p p --provider-option black-forest-labs.steps`,
+			wantsErr: true,
+			errMsg:   `invalid provider-option "black-forest-labs.steps"`,
+		},
+		{
+			name:     "provider option missing key",
+			cli:      `-m m -p p --provider-option black-forest-labs=40`,
+			wantsErr: true,
+			errMsg:   `invalid provider-option "black-forest-labs=40"`,
+		},
+		{
+			name:     "empty provider order slug",
+			cli:      `-m m -p p --provider-order a,,b`,
+			wantsErr: true,
+			errMsg:   "provider-order slugs must not be empty",
+		},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -142,6 +185,14 @@ func TestNewCmdGenerate(t *testing.T) {
 			assert.Equal(t, tt.wantsOpts.Seed, opts.Seed)
 			assert.Equal(t, tt.wantsOpts.SeedSet, opts.SeedSet)
 			assert.Equal(t, tt.wantsOpts.InputReferences, opts.InputReferences)
+			assert.Equal(t, tt.wantsOpts.ProviderSort, opts.ProviderSort)
+			assert.Equal(t, tt.wantsOpts.ProviderOrder, opts.ProviderOrder)
+			assert.Equal(t, tt.wantsOpts.ProviderOnly, opts.ProviderOnly)
+			assert.Equal(t, tt.wantsOpts.ProviderIgnore, opts.ProviderIgnore)
+			assert.Equal(t, tt.wantsOpts.NoProviderFallbacks, opts.NoProviderFallbacks)
+			assert.Equal(t, tt.wantsOpts.FallbacksSet, opts.FallbacksSet)
+			assert.Equal(t, tt.wantsOpts.ProviderOptions, opts.ProviderOptions)
+			assert.Equal(t, tt.wantsOpts.ProviderOptionValues, opts.ProviderOptionValues)
 		})
 	}
 }
@@ -260,6 +311,135 @@ func Test_runGenerate(t *testing.T) {
 		}, req.InputReferences)
 	})
 
+	t.Run("provider preferences sent on the wire", func(t *testing.T) {
+		var gotBody []byte
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodGet {
+				// endpoints lookup from the passthrough warning check
+				_ = json.NewEncoder(w).Encode(map[string]any{
+					"id": "black-forest-labs/flux.2-pro",
+					"endpoints": []map[string]any{{
+						"provider_slug":                  "black-forest-labs",
+						"allowed_passthrough_parameters": []string{"steps", "guidance"},
+					}},
+				})
+				return
+			}
+			gotBody, _ = io.ReadAll(r.Body)
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"created": 1,
+				"data": []map[string]string{{
+					"b64_json":   base64.StdEncoding.EncodeToString([]byte("img")),
+					"media_type": "image/png",
+				}},
+			})
+		}))
+		t.Cleanup(srv.Close)
+		client := openrouter.New("k", openrouter.WithBaseURL(srv.URL))
+
+		ios, _, _, stderr := iostreams.Test()
+		opts := &GenerateOptions{
+			IOStreams:           ios,
+			OpenRouter:          func() (*openrouter.Client, error) { return client, nil },
+			Model:               "black-forest-labs/flux.2-pro",
+			Prompt:              "p",
+			Out:                 filepath.Join(t.TempDir(), "out.png"),
+			ProviderSort:        "price",
+			ProviderOrder:       []string{"black-forest-labs"},
+			ProviderIgnore:      []string{"openai"},
+			NoProviderFallbacks: true, FallbacksSet: true,
+			ProviderOptionValues: map[string]map[string]any{
+				"black-forest-labs": {"steps": int64(40), "guidance": 3.5},
+			},
+		}
+		require.NoError(t, runGenerate(t.Context(), opts))
+
+		var req map[string]any
+		require.NoError(t, json.Unmarshal(gotBody, &req))
+		assert.Equal(t, map[string]any{
+			"sort":            "price",
+			"order":           []any{"black-forest-labs"},
+			"ignore":          []any{"openai"},
+			"allow_fallbacks": false,
+			"options": map[string]any{
+				"black-forest-labs": map[string]any{"steps": float64(40), "guidance": 3.5},
+			},
+		}, req["provider"])
+		assert.Empty(t, stderr.String(), "advertised keys must not warn")
+	})
+
+	t.Run("provider omitted when no routing set", func(t *testing.T) {
+		var gotBody []byte
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gotBody, _ = io.ReadAll(r.Body)
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"created": 1,
+				"data": []map[string]string{{
+					"b64_json":   base64.StdEncoding.EncodeToString([]byte("img")),
+					"media_type": "image/png",
+				}},
+			})
+		}))
+		t.Cleanup(srv.Close)
+		client := openrouter.New("k", openrouter.WithBaseURL(srv.URL))
+
+		ios, _, _, _ := iostreams.Test()
+		opts := &GenerateOptions{
+			IOStreams:  ios,
+			OpenRouter: func() (*openrouter.Client, error) { return client, nil },
+			Model:      "m",
+			Prompt:     "p",
+			Out:        filepath.Join(t.TempDir(), "out.png"),
+		}
+		require.NoError(t, runGenerate(t.Context(), opts))
+
+		var req map[string]any
+		require.NoError(t, json.Unmarshal(gotBody, &req))
+		assert.NotContains(t, req, "provider")
+	})
+
+	t.Run("warns on unadvertised passthrough options", func(t *testing.T) {
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.Method == http.MethodGet {
+				_ = json.NewEncoder(w).Encode(map[string]any{
+					"id": "m",
+					"endpoints": []map[string]any{{
+						"provider_slug":                  "black-forest-labs",
+						"allowed_passthrough_parameters": []string{"steps"},
+					}},
+				})
+				return
+			}
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"created": 1,
+				"data": []map[string]string{{
+					"b64_json":   base64.StdEncoding.EncodeToString([]byte("img")),
+					"media_type": "image/png",
+				}},
+			})
+		}))
+		t.Cleanup(srv.Close)
+		client := openrouter.New("k", openrouter.WithBaseURL(srv.URL))
+
+		ios, _, _, stderr := iostreams.Test()
+		opts := &GenerateOptions{
+			IOStreams:  ios,
+			OpenRouter: func() (*openrouter.Client, error) { return client, nil },
+			Model:      "m",
+			Prompt:     "p",
+			Out:        filepath.Join(t.TempDir(), "out.png"),
+			ProviderOptionValues: map[string]map[string]any{
+				"black-forest-labs": {"stepz": int64(1)},
+				"no-such-provider":  {"x": int64(2)},
+			},
+		}
+		require.NoError(t, runGenerate(t.Context(), opts))
+
+		out := stderr.String()
+		assert.Contains(t, out, `"stepz" is not an advertised passthrough key for black-forest-labs`)
+		assert.Contains(t, out, `has no "no-such-provider" endpoint`)
+	})
+
 	t.Run("api error surfaces", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusPaymentRequired)
@@ -321,6 +501,13 @@ type stubConfig struct {
 	model, aspect, format string
 	compression           int
 	compressionSet        bool
+	providerSort          string
+	providerOrder         []string
+	providerOnly          []string
+	providerIgnore        []string
+	allowFallbacks        bool
+	allowFallbacksSet     bool
+	providerOptions       map[string]map[string]any
 }
 
 func (s stubConfig) Model() string                  { return s.model }
@@ -328,16 +515,32 @@ func (s stubConfig) AspectRatio() string            { return s.aspect }
 func (s stubConfig) OutputFormat() string           { return s.format }
 func (s stubConfig) OutputCompression() (int, bool) { return s.compression, s.compressionSet }
 func (s stubConfig) Provider() map[string]any       { return nil }
-func (s stubConfig) AllKeys() []string              { return nil }
-func (s stubConfig) Get(string) (string, error)     { return "", nil }
-func (s stubConfig) Set(string, string) error       { return nil }
-func (s stubConfig) Save() error                    { return nil }
-func (s stubConfig) Path() string                   { return "" }
+func (s stubConfig) ProviderSort() string           { return s.providerSort }
+func (s stubConfig) ProviderOrder() []string        { return s.providerOrder }
+func (s stubConfig) ProviderOnly() []string         { return s.providerOnly }
+func (s stubConfig) ProviderIgnore() []string       { return s.providerIgnore }
+func (s stubConfig) ProviderAllowFallbacks() (bool, bool) {
+	return s.allowFallbacks, s.allowFallbacksSet
+}
+func (s stubConfig) ProviderOptions() map[string]map[string]any { return s.providerOptions }
+func (s stubConfig) AllKeys() []string                          { return nil }
+func (s stubConfig) Get(string) (string, error)                 { return "", nil }
+func (s stubConfig) Set(string, string) error                   { return nil }
+func (s stubConfig) Save() error                                { return nil }
+func (s stubConfig) Path() string                               { return "" }
 
 func TestGenerateConfigDefaults(t *testing.T) {
 	cfg := stubConfig{
 		model: "cfg/model", aspect: "16:9", format: "webp",
 		compression: 42, compressionSet: true,
+		providerSort:   "price",
+		providerOrder:  []string{"fal"},
+		providerOnly:   []string{"fal", "replicate"},
+		providerIgnore: []string{"openai"},
+		allowFallbacks: false, allowFallbacksSet: true,
+		providerOptions: map[string]map[string]any{
+			"black-forest-labs": {"steps": int64(28)},
+		},
 	}
 	tests := []struct {
 		name      string
@@ -354,15 +557,32 @@ func TestGenerateConfigDefaults(t *testing.T) {
 			wantsOpts: GenerateOptions{
 				Model: "cfg/model", Prompt: "prompt", AspectRatio: "16:9",
 				OutputFormat: "webp", OutputCompression: 42, CompressionSet: true,
+				ProviderSort:  "price",
+				ProviderOrder: []string{"fal"}, ProviderOnly: []string{"fal", "replicate"},
+				ProviderIgnore:      []string{"openai"},
+				NoProviderFallbacks: true, FallbacksSet: true,
+				ProviderOptionValues: map[string]map[string]any{
+					"black-forest-labs": {"steps": int64(28)},
+				},
 			},
 		},
 		{
-			name:   "flags beat config",
-			cli:    `-m flag/model -p prompt --aspect-ratio 1:1 --output-format png --output-compression 90`,
+			name: "flags beat config",
+			cli: `-m flag/model -p prompt --aspect-ratio 1:1 --output-format png --output-compression 90 ` +
+				`--provider-sort latency --provider-order direct --no-provider-fallbacks=false ` +
+				`--provider-option black-forest-labs.steps=40`,
 			config: cfg,
 			wantsOpts: GenerateOptions{
 				Model: "flag/model", Prompt: "prompt", AspectRatio: "1:1",
 				OutputFormat: "png", OutputCompression: 90, CompressionSet: true,
+				ProviderSort:  "latency",
+				ProviderOrder: []string{"direct"}, ProviderOnly: []string{"fal", "replicate"},
+				ProviderIgnore:      []string{"openai"},
+				NoProviderFallbacks: false, FallbacksSet: true,
+				ProviderOptions: []string{"black-forest-labs.steps=40"},
+				ProviderOptionValues: map[string]map[string]any{
+					"black-forest-labs": {"steps": int64(40)},
+				},
 			},
 		},
 		{
@@ -420,6 +640,13 @@ func TestGenerateConfigDefaults(t *testing.T) {
 			assert.Equal(t, tt.wantsOpts.OutputFormat, opts.OutputFormat)
 			assert.Equal(t, tt.wantsOpts.OutputCompression, opts.OutputCompression)
 			assert.Equal(t, tt.wantsOpts.CompressionSet, opts.CompressionSet)
+			assert.Equal(t, tt.wantsOpts.ProviderSort, opts.ProviderSort)
+			assert.Equal(t, tt.wantsOpts.ProviderOrder, opts.ProviderOrder)
+			assert.Equal(t, tt.wantsOpts.ProviderOnly, opts.ProviderOnly)
+			assert.Equal(t, tt.wantsOpts.ProviderIgnore, opts.ProviderIgnore)
+			assert.Equal(t, tt.wantsOpts.NoProviderFallbacks, opts.NoProviderFallbacks)
+			assert.Equal(t, tt.wantsOpts.FallbacksSet, opts.FallbacksSet)
+			assert.Equal(t, tt.wantsOpts.ProviderOptionValues, opts.ProviderOptionValues)
 		})
 	}
 }

@@ -65,6 +65,28 @@ orgen models info <model-id> --json
 Check `models info` before passing generation flags beyond `-m`/`-p`/`-o` —
 parameter support varies by model and provider.
 
+When the user cares about which provider serves the request (cost,
+speed, a specific vendor), use the provider routing flags — see
+`orgen generate --help` for the full set. These map to OpenRouter's
+documented `provider` request object, so they behave the same for
+every model.
+
+Provider-specific tuning knobs (steps, guidance, and similar) are
+passthrough parameters, discovered per endpoint rather than defined by
+the API contract. Never guess them: read each endpoint's
+`allowed_passthrough_parameters` first, then pass exactly those keys —
+the API silently drops keys a provider doesn't advertise, and orgen
+warns on stderr when that would happen:
+
+```
+orgen models info <model-id> --json   # note provider_slug + allowed_passthrough_parameters
+orgen generate -m <model-id> -p "..." --provider-option <slug>.<key>=<value>
+```
+
+Keys are case-sensitive on the wire; `--provider-option` preserves
+case, but persisted config (`provider.options.<slug>.<key>`) lowercases
+keys, so camelCase keys must go on the command line.
+
 When the user settles on a model or output preference they keep
 repeating, offer to save it as a persisted default so later runs can
 omit the flag:
