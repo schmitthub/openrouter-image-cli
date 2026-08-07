@@ -34,9 +34,33 @@ type ImageRequest struct {
 	Background string `json:"background,omitempty"`
 	// Seed makes generation deterministic where the model supports it.
 	Seed *int64 `json:"seed,omitempty"`
-	// InputReferences are base64 data or HTTP(S) URLs of reference images
-	// for image-to-image generation (max 16).
-	InputReferences []string `json:"input_references,omitempty"`
+	// InputReferences are reference images for image-to-image generation
+	// (max 16). The API requires each entry as a structured object, not a
+	// bare string; build entries with NewInputReference.
+	InputReferences []InputReference `json:"input_references,omitempty"`
+}
+
+// InputReference is one reference image in an ImageRequest. The API accepts
+// only this object form: {"type":"image_url","image_url":{"url":...}}.
+type InputReference struct {
+	// Type is always "image_url".
+	Type string `json:"type"`
+	// ImageURL wraps the reference location.
+	ImageURL ImageURL `json:"image_url"`
+}
+
+// ImageURL locates a reference image: an HTTP(S) URL or a base64 data URI.
+type ImageURL struct {
+	URL string `json:"url"`
+}
+
+// NewInputReference wraps an HTTP(S) URL or base64 data URI in the object
+// form the API requires for input_references.
+func NewInputReference(url string) InputReference {
+	return InputReference{
+		Type:     "image_url",
+		ImageURL: ImageURL{URL: url},
+	}
 }
 
 // ImageData is one generated image in an ImageResponse.
