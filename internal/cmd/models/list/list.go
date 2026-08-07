@@ -58,7 +58,7 @@ func runList(ctx context.Context, opts *ListOptions) error {
 
 	ios := opts.IOStreams
 	if opts.JSON {
-		out, jsonErr := cmdutil.JSONStringify(models, false)
+		out, jsonErr := cmdutil.JSONStringify(models, true)
 		if jsonErr != nil {
 			return fmt.Errorf("encoding models: %w", jsonErr)
 		}

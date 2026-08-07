@@ -47,7 +47,7 @@ func Test_runList(t *testing.T) {
 
 		require.NoError(t, runList(t.Context(), opts))
 
-		assert.Contains(t, stdout.String(), `"id": "b/two"`)
+		assert.Contains(t, stdout.String(), `"id":"b/two"`)
 		assert.NotContains(t, stdout.String(), "NAME")
 	})
 }

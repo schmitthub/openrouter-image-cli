@@ -63,6 +63,6 @@ func Test_runInfo(t *testing.T) {
 
 		require.NoError(t, runInfo(t.Context(), opts))
 
-		assert.Contains(t, stdout.String(), `"provider_slug": "alibaba"`)
+		assert.Contains(t, stdout.String(), `"provider_slug":"alibaba"`)
 	})
 }

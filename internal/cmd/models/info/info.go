@@ -62,7 +62,7 @@ func runInfo(ctx context.Context, opts *InfoOptions) error {
 
 	ios := opts.IOStreams
 	if opts.JSON {
-		out, jsonErr := cmdutil.JSONStringify(eps, false)
+		out, jsonErr := cmdutil.JSONStringify(eps, true)
 		if jsonErr != nil {
 			return fmt.Errorf("encoding model detail: %w", jsonErr)
 		}

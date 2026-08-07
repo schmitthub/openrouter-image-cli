@@ -129,8 +129,7 @@ Mirrors `schmitthub/clawker` (minus its embed/BPF machinery):
 
 - Streaming (`stream: true`, SSE partial images) is not implemented in
   `internal/openrouter`; neither is the `provider` routing object.
-- `models list/info --json` always pretty-print; there is no `--compact-output` flag.
-  Add `Factory.CompactOutput` if single-line JSON output is wanted.
+- `models list/info --json` emit compact single-line JSON (machine-oriented).
 - Homebrew tap publishing is stubbed out in `.goreleaser.yaml` (commented `homebrew_casks`
   block) — needs a `schmitthub/homebrew-tap` repo and a `HOMEBREW_TAP_GITHUB_TOKEN` secret
   wired through `release.yml` -> `release-build.yml` before enabling.
