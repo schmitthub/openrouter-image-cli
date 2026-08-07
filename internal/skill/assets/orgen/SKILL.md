@@ -39,6 +39,15 @@ orgen generate -m <model-id> -p "put the dog from the first image into the scene
   --input-reference ./dog.jpg --input-reference https://example.com/park.png -o combined.png
 ```
 
+Reference order matters in practice: models tend to treat the first
+reference as the primary subject and later ones as secondary material
+(scene, style, target). Put the subject to preserve first, and make the
+prompt refer to references by position ("the first image", "the second
+image"). The API contract does not define ordering semantics — behavior
+is model-specific — so if a multi-reference edit ignores or mishandles
+one of the images, swap the reference order and retry before changing
+the prompt.
+
 When the user asks what models are available, or what a model supports
 and costs:
 
