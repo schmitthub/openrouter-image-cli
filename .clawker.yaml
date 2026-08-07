@@ -102,7 +102,7 @@ security:
         path_rules:
           - action: allow
             path: ~/docs(/.*)?
-          # full API surface for orimage development
+          # full API surface for orgen development
           - action: allow
             path: ~/api(/.*)?
       - dst: github.com
@@ -142,7 +142,7 @@ security:
           - action: allow
             path: ~/repos/openclaw(/.*)?
           - action: allow
-            path: ~/repos/schmitthub/openrouter-image-cli(/.*)?
+            path: ~/repos/schmitthub/openrouter-generate(/.*)?
           - action: allow
             path: /repos/upstash/context7/
           - action: allow
@@ -155,7 +155,7 @@ security:
           - action: allow
             path: ~/openclaw(/.*)?
           - action: allow
-            path: ~/repos/schmitthub/openrouter-image-cli(/.*)?
+            path: ~/repos/schmitthub/openrouter-generate(/.*)?
           - action: allow
             path: /upstash/context7/master/plugins/claude/context7/skills/context7-mcp/
           - action: allow

@@ -9,10 +9,10 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/schmitthub/openrouter-image-cli/internal/cmdutil"
-	"github.com/schmitthub/openrouter-image-cli/internal/config"
-	"github.com/schmitthub/openrouter-image-cli/internal/iostreams"
-	"github.com/schmitthub/openrouter-image-cli/internal/openrouter"
+	"github.com/schmitthub/openrouter-generate/internal/cmdutil"
+	"github.com/schmitthub/openrouter-generate/internal/config"
+	"github.com/schmitthub/openrouter-generate/internal/iostreams"
+	"github.com/schmitthub/openrouter-generate/internal/openrouter"
 )
 
 // Output formats and their file extensions.
@@ -92,8 +92,8 @@ func NewCmdGenerate(f *cmdutil.Factory, runF func(*GenerateOptions) error) *cobr
 		Short: "Generate an image",
 		Long: `Generate one or more images with an OpenRouter image model and write
 them to disk. Requires the OPENROUTER_API_KEY environment variable.`,
-		Example: `  orimage generate -m google/gemini-2.5-flash-image -p "a red bicycle"
-  orimage generate -m bytedance-seed/seedream-4.5 -p "night market, rain" \
+		Example: `  orgen generate -m google/gemini-2.5-flash-image -p "a red bicycle"
+  orgen generate -m bytedance-seed/seedream-4.5 -p "night market, rain" \
     -o market.png --size 2K --quality high -n 3`,
 		Args: cobra.NoArgs,
 		RunE: func(cmd *cobra.Command, args []string) error {
@@ -115,7 +115,7 @@ them to disk. Requires the OPENROUTER_API_KEY environment variable.`,
 	fl := cmd.Flags()
 	fl.StringVarP(&opts.Model, "model", "m", "", "Image model identifier (required unless a default is configured)")
 	fl.StringVarP(&opts.Prompt, "prompt", "p", "", "Text description of the desired image (required)")
-	fl.StringVarP(&opts.Out, "out", "o", "", "Output file path (default: orimage-<timestamp>.<ext>)")
+	fl.StringVarP(&opts.Out, "out", "o", "", "Output file path (default: orgen-<timestamp>.<ext>)")
 	fl.IntVarP(&opts.N, "count", "n", 0, "Number of images to generate (1-10)")
 	fl.StringVar(&opts.Size, "size", "", `Image size: shorthand ("2K", "4K") or pixels ("2048x2048")`)
 	fl.StringVar(&opts.Quality, "quality", "", "Quality: auto|low|medium|high")

@@ -1,9 +1,9 @@
-// Package config loads and persists orimage settings.
+// Package config loads and persists orgen settings.
 //
-// Settings live in config.yaml under $ORIMAGE_CONFIG_DIR, or the
-// user's XDG config directory under "orimage" when unset. Every key is
-// readable from an ORIMAGE_-prefixed environment variable (dots become
-// underscores: provider.sort -> ORIMAGE_PROVIDER_SORT), and environment
+// Settings live in config.yaml under $ORGEN_CONFIG_DIR, or the
+// user's XDG config directory under "orgen" when unset. Every key is
+// readable from an ORGEN_-prefixed environment variable (dots become
+// underscores: provider.sort -> ORGEN_PROVIDER_SORT), and environment
 // values rank above file values. The package never prints; failures
 // surface as returned errors.
 package config
@@ -32,11 +32,11 @@ const (
 )
 
 // EnvConfigDir overrides the directory holding config.yaml.
-const EnvConfigDir = "ORIMAGE_CONFIG_DIR"
+const EnvConfigDir = "ORGEN_CONFIG_DIR"
 
 const (
-	envPrefix = "orimage"
-	appDir    = "orimage"
+	envPrefix = "orgen"
+	appDir    = "orgen"
 	fileName  = "config.yaml"
 	dirPerm   = 0o700
 	filePerm  = 0o600
@@ -71,15 +71,15 @@ type Config interface {
 	Path() string
 }
 
-// scalarKeys are the top-level keys bound to ORIMAGE_* environment
+// scalarKeys are the top-level keys bound to ORGEN_* environment
 // variables at load time; nested provider.* keys are served by
 // viper's AutomaticEnv instead.
 func scalarKeys() []string {
 	return []string{KeyModel, KeyAspectRatio, KeyOutputFormat, KeyOutputCompression}
 }
 
-// filePath resolves the config file location: $ORIMAGE_CONFIG_DIR when
-// set, else <user-config-dir>/orimage.
+// filePath resolves the config file location: $ORGEN_CONFIG_DIR when
+// set, else <user-config-dir>/orgen.
 func filePath() (string, error) {
 	if dir := os.Getenv(EnvConfigDir); dir != "" {
 		return filepath.Join(dir, fileName), nil

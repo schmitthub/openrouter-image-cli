@@ -8,9 +8,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/schmitthub/openrouter-image-cli/internal/cmdutil"
-	"github.com/schmitthub/openrouter-image-cli/internal/iostreams"
-	"github.com/schmitthub/openrouter-image-cli/internal/openrouter"
+	"github.com/schmitthub/openrouter-generate/internal/cmdutil"
+	"github.com/schmitthub/openrouter-generate/internal/iostreams"
+	"github.com/schmitthub/openrouter-generate/internal/openrouter"
 )
 
 type InfoOptions struct {
@@ -35,7 +35,7 @@ func NewCmdInfo(f *cmdutil.Factory, runF func(*InfoOptions) error) *cobra.Comman
 		Long: `Show per-provider details for one image model
 (GET /images/models/{id}/endpoints): supported parameters, streaming
 support, and pricing. Requires the OPENROUTER_API_KEY environment variable.`,
-		Example: `  orimage models info qwen/qwen-image-3`,
+		Example: `  orgen models info qwen/qwen-image-3`,
 		Args:    cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.Model = args[0]

@@ -1,4 +1,4 @@
-// Package get implements "orimage config get".
+// Package get implements "orgen config get".
 package get
 
 import (
@@ -6,9 +6,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/schmitthub/openrouter-image-cli/internal/cmdutil"
-	"github.com/schmitthub/openrouter-image-cli/internal/config"
-	"github.com/schmitthub/openrouter-image-cli/internal/iostreams"
+	"github.com/schmitthub/openrouter-generate/internal/cmdutil"
+	"github.com/schmitthub/openrouter-generate/internal/config"
+	"github.com/schmitthub/openrouter-generate/internal/iostreams"
 )
 
 type GetOptions struct {
@@ -28,8 +28,8 @@ func NewCmdGet(f *cmdutil.Factory, runF func(*GetOptions) error) *cobra.Command 
 	cmd := &cobra.Command{
 		Use:   "get <key>",
 		Short: "Print the effective value for a config key",
-		Example: `  orimage config get model
-  orimage config get provider.sort`,
+		Example: `  orgen config get model
+  orgen config get provider.sort`,
 		Args: cmdutil.ExactArgs(1, "expected a config key"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.Key = args[0]

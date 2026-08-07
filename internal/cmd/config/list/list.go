@@ -1,4 +1,4 @@
-// Package list implements "orimage config list".
+// Package list implements "orgen config list".
 package list
 
 import (
@@ -6,9 +6,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/schmitthub/openrouter-image-cli/internal/cmdutil"
-	"github.com/schmitthub/openrouter-image-cli/internal/config"
-	"github.com/schmitthub/openrouter-image-cli/internal/iostreams"
+	"github.com/schmitthub/openrouter-generate/internal/cmdutil"
+	"github.com/schmitthub/openrouter-generate/internal/config"
+	"github.com/schmitthub/openrouter-generate/internal/iostreams"
 )
 
 type ListOptions struct {

@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/schmitthub/openrouter-image-cli/internal/cmdutil"
-	"github.com/schmitthub/openrouter-image-cli/internal/iostreams"
+	"github.com/schmitthub/openrouter-generate/internal/cmdutil"
+	"github.com/schmitthub/openrouter-generate/internal/iostreams"
 )
 
 func TestNewCmdInstall(t *testing.T) {
@@ -88,7 +88,7 @@ func Test_runInstall(t *testing.T) {
 
 		require.NoError(t, runInstall(opts))
 
-		want := filepath.Join(dir, "orimage", "SKILL.md")
+		want := filepath.Join(dir, "orgen", "SKILL.md")
 		assert.FileExists(t, want)
 		assert.Contains(t, stdout.String(), want)
 	})

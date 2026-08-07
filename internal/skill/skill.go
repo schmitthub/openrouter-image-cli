@@ -1,4 +1,4 @@
-// Package skill embeds the agent skill shipped with orimage
+// Package skill embeds the agent skill shipped with orgen
 // (https://docs.openclaw.ai/tools/skills) and installs it into a
 // user-chosen skills directory.
 package skill
@@ -22,7 +22,7 @@ const (
 )
 
 // Files returns the embedded skill tree, rooted at the skill directory
-// (e.g. "orimage/SKILL.md").
+// (e.g. "orgen/SKILL.md").
 func Files() (fs.FS, error) {
 	sub, err := fs.Sub(assetsFS, "assets")
 	if err != nil {
@@ -36,7 +36,7 @@ func Files() (fs.FS, error) {
 var ErrExists = errors.New("skill already installed")
 
 // Install writes the embedded skill into dir as the skill's own
-// subdirectory (e.g. dir/orimage) and returns the written file paths in
+// subdirectory (e.g. dir/orgen) and returns the written file paths in
 // walk (lexical) order. dir may exist (it must then be a directory) or
 // is created; entries in dir other than the skill's subdirectory are
 // never touched. The skill's subdirectory is owned by the installer: if

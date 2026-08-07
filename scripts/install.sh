@@ -1,17 +1,17 @@
 #!/bin/sh
-# Install orimage from GitHub releases.
+# Install orgen from GitHub releases.
 #
-#   curl -fsSL https://raw.githubusercontent.com/schmitthub/openrouter-image-cli/main/scripts/install.sh | sh
+#   curl -fsSL https://raw.githubusercontent.com/schmitthub/openrouter-generate/main/scripts/install.sh | sh
 #
 # Environment:
-#   ORIMAGE_VERSION      release tag to install (default: latest, e.g. v2026.8.3)
-#   ORIMAGE_INSTALL_DIR  target directory (default: /usr/local/bin, falls back
+#   ORGEN_VERSION      release tag to install (default: latest, e.g. v2026.8.3)
+#   ORGEN_INSTALL_DIR  target directory (default: /usr/local/bin, falls back
 #                        to ~/.local/bin when /usr/local/bin is not writable
 #                        and sudo is unavailable)
 set -eu
 
-REPO="schmitthub/openrouter-image-cli"
-BINARY="orimage"
+REPO="schmitthub/openrouter-generate"
+BINARY="orgen"
 
 err() {
     printf 'error: %s\n' "$1" >&2
@@ -38,7 +38,7 @@ case "$arch" in
     *) err "unsupported architecture: $arch" ;;
 esac
 
-version="${ORIMAGE_VERSION:-}"
+version="${ORGEN_VERSION:-}"
 if [ -z "$version" ]; then
     version=$(curl -fsSL "https://api.github.com/repos/$REPO/releases/latest" |
         grep '"tag_name":' | sed -E 's/.*"([^"]+)".*/\1/')
@@ -68,13 +68,13 @@ grep -q "^$sha  $archive\$" "$tmpdir/checksums.txt" ||
 
 tar -xzf "$tmpdir/$archive" -C "$tmpdir" "$BINARY"
 
-install_dir="${ORIMAGE_INSTALL_DIR:-/usr/local/bin}"
+install_dir="${ORGEN_INSTALL_DIR:-/usr/local/bin}"
 if [ -w "$install_dir" ]; then
     install -m 0755 "$tmpdir/$BINARY" "$install_dir/$BINARY"
-elif [ -z "${ORIMAGE_INSTALL_DIR:-}" ] && command -v sudo >/dev/null 2>&1; then
+elif [ -z "${ORGEN_INSTALL_DIR:-}" ] && command -v sudo >/dev/null 2>&1; then
     printf 'Installing to %s (sudo)...\n' "$install_dir"
     sudo install -m 0755 "$tmpdir/$BINARY" "$install_dir/$BINARY"
-elif [ -z "${ORIMAGE_INSTALL_DIR:-}" ]; then
+elif [ -z "${ORGEN_INSTALL_DIR:-}" ]; then
     install_dir="$HOME/.local/bin"
     mkdir -p "$install_dir"
     install -m 0755 "$tmpdir/$BINARY" "$install_dir/$BINARY"

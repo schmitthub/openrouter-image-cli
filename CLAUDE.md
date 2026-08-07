@@ -4,8 +4,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What this is
 
-`orimage` — a Go CLI that calls the OpenRouter API to generate images and writes them to disk.
-Module path `github.com/schmitthub/openrouter-image-cli`, binary `orimage`.
+`orgen` — a Go CLI that calls the OpenRouter API to generate images and writes them to disk.
+Module path `github.com/schmitthub/openrouter-generate`, binary `orgen`.
 
 Working commands: `generate` (image generation), `models list` / `models info`
 (model catalog), `config get/set/list/path` (persisted generation defaults —
@@ -15,7 +15,7 @@ see `internal/config`), `skill install` (write the embedded agent skill — see
 ## Commands
 
 ```sh
-make build            # -> bin/orimage, ldflags-stamped version/revision
+make build            # -> bin/orgen, ldflags-stamped version/revision
 make test             # go test ./... (uses gotestsum --format testdox if installed)
 make test-verbose
 make cover            # coverage.out + per-func summary
@@ -30,7 +30,7 @@ make release VERSION=v0.1.0 MESSAGE="..."   # tag + push -> triggers release wor
 
 Single test: `go test ./internal/query -run TestName -v`
 
-`bin/` is on `PATH` via `.envrc` (direnv), so `orimage` resolves after `make build`.
+`bin/` is on `PATH` via `.envrc` (direnv), so `orgen` resolves after `make build`.
 `.envrc` also does `dotenv` — `.env` holds `OPENROUTER_API_KEY` and is gitignored.
 
 ## Architecture
@@ -38,8 +38,8 @@ Single test: `go test ./internal/query -run TestName -v`
 Layered after the `gh` CLI's structure. Flow:
 
 ```
-cmd/orimage/orimage.go        main(), exits with the code from …
-internal/orimagecmd/cmd.go    Main(): builds IOStreams -> Factory -> root cmd, executes,
+cmd/orgen/orgen.go        main(), exits with the code from …
+internal/orgencmd/cmd.go    Main(): builds IOStreams -> Factory -> root cmd, executes,
                               maps errors to exit codes, prints usage on *cmdutil.FlagError
 internal/cmd/factory          constructs the Factory (dependency container)
 internal/cmd/root             assembles the cobra tree; the only place subcommands register
@@ -86,8 +86,8 @@ commands (version, help) still run.
 **`internal/config`** — viper-backed persisted settings behind a `Config` interface
 (`New()` returns the interface; commands mock it in tests). Keys: `model`,
 `aspect_ratio`, `output_format`, `output_compression`, `provider.<setting>`. File:
-`config.yaml` under `$ORIMAGE_CONFIG_DIR` or `<os.UserConfigDir>/orimage` (XDG).
-Precedence: flags > `ORIMAGE_*` env vars (viper `AutomaticEnv`, dots→underscores) >
+`config.yaml` under `$ORGEN_CONFIG_DIR` or `<os.UserConfigDir>/orgen` (XDG).
+Precedence: flags > `ORGEN_*` env vars (viper `AutomaticEnv`, dots→underscores) >
 file. Lean on viper's own introspection: key enumeration is `AllKeys()` (scalar keys
 registered via `BindEnv`, NOT `SetDefault` — viper's `IsSet` treats defaults as set,
 which would break `OutputCompression()`'s set-detection), the file location is
@@ -120,7 +120,7 @@ Mirrors `schmitthub/clawker` (minus its embed/BPF machinery):
   run for the tagged SHA, then calls `release-build.yml` (goreleaser + cosign
   keyless sign of checksums.txt + SLSA attestation of archives and binaries).
   `release-build.yml` is the SLSA-anchored identity — verify with
-  `gh attestation verify --signer-workflow schmitthub/openrouter-image-cli/.github/workflows/release-build.yml`.
+  `gh attestation verify --signer-workflow schmitthub/openrouter-generate/.github/workflows/release-build.yml`.
 - Cut a release with `make release VERSION=vX.Y.Z MESSAGE="..."` — it enforces
   clean tree / on-main / synced / CI-green locally before tagging.
 - GitHub rulesets (created by `scripts/setup-repo-rulesets.sh`, idempotent):

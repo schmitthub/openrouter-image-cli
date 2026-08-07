@@ -10,11 +10,11 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/schmitthub/openrouter-image-cli/internal/cmd/factory"
-	"github.com/schmitthub/openrouter-image-cli/internal/cmd/root"
-	"github.com/schmitthub/openrouter-image-cli/internal/cmdutil"
-	"github.com/schmitthub/openrouter-image-cli/internal/config"
-	"github.com/schmitthub/openrouter-image-cli/internal/iostreams"
+	"github.com/schmitthub/openrouter-generate/internal/cmd/factory"
+	"github.com/schmitthub/openrouter-generate/internal/cmd/root"
+	"github.com/schmitthub/openrouter-generate/internal/cmdutil"
+	"github.com/schmitthub/openrouter-generate/internal/config"
+	"github.com/schmitthub/openrouter-generate/internal/iostreams"
 )
 
 // execWith runs args through the real command tree on an existing
@@ -67,7 +67,7 @@ func TestIntegrationSetNeverPersistsEnvOverrides(t *testing.T) {
 	t.Setenv(config.EnvConfigDir, dir)
 	require.NoError(t, os.WriteFile(filepath.Join(dir, "config.yaml"),
 		[]byte("aspect_ratio: \"16:9\"\n"), 0o600))
-	t.Setenv("ORIMAGE_MODEL", "env/override")
+	t.Setenv("ORGEN_MODEL", "env/override")
 
 	_, err := execRoot(t, "config", "set", "output_format", "webp")
 	require.NoError(t, err)
@@ -77,7 +77,7 @@ func TestIntegrationSetNeverPersistsEnvOverrides(t *testing.T) {
 	assert.Contains(t, string(raw), "aspect_ratio")
 	assert.Contains(t, string(raw), "output_format: webp")
 	assert.NotContains(t, string(raw), "env/override",
-		"an ORIMAGE_* override must never be written to disk by config set")
+		"an ORGEN_* override must never be written to disk by config set")
 
 	out, err := execRoot(t, "config", "get", "model")
 	require.NoError(t, err)

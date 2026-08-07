@@ -3,10 +3,10 @@ package factory
 import (
 	"sync"
 
-	"github.com/schmitthub/openrouter-image-cli/internal/cmdutil"
-	"github.com/schmitthub/openrouter-image-cli/internal/config"
-	"github.com/schmitthub/openrouter-image-cli/internal/iostreams"
-	"github.com/schmitthub/openrouter-image-cli/internal/openrouter"
+	"github.com/schmitthub/openrouter-generate/internal/cmdutil"
+	"github.com/schmitthub/openrouter-generate/internal/config"
+	"github.com/schmitthub/openrouter-generate/internal/iostreams"
+	"github.com/schmitthub/openrouter-generate/internal/openrouter"
 )
 
 func New(appVersion string, ios *iostreams.IOStreams) *cmdutil.Factory {
@@ -28,6 +28,6 @@ func openRouterFunc() func() (*openrouter.Client, error) {
 	return func() (*openrouter.Client, error) {
 		return openrouter.NewFromEnv(
 			openrouter.WithAttribution(
-				"https://github.com/schmitthub/openrouter-image-cli", "orimage"))
+				"https://github.com/schmitthub/openrouter-generate", "orgen"))
 	}
 }

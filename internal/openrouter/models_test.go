@@ -8,7 +8,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/schmitthub/openrouter-image-cli/internal/openrouter"
+	"github.com/schmitthub/openrouter-generate/internal/openrouter"
 )
 
 func TestListImageModels(t *testing.T) {

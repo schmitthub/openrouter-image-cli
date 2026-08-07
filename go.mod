@@ -1,4 +1,4 @@
-module github.com/schmitthub/openrouter-image-cli
+module github.com/schmitthub/openrouter-generate
 
 go 1.26.5
 

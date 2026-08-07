@@ -1,4 +1,4 @@
-package orimagecmd
+package orgencmd
 
 import (
 	"context"
@@ -7,11 +7,11 @@ import (
 	"io"
 	"strings"
 
-	"github.com/schmitthub/openrouter-image-cli/internal/build"
-	"github.com/schmitthub/openrouter-image-cli/internal/cmd/factory"
-	"github.com/schmitthub/openrouter-image-cli/internal/cmd/root"
-	"github.com/schmitthub/openrouter-image-cli/internal/cmdutil"
-	"github.com/schmitthub/openrouter-image-cli/internal/iostreams"
+	"github.com/schmitthub/openrouter-generate/internal/build"
+	"github.com/schmitthub/openrouter-generate/internal/cmd/factory"
+	"github.com/schmitthub/openrouter-generate/internal/cmd/root"
+	"github.com/schmitthub/openrouter-generate/internal/cmdutil"
+	"github.com/schmitthub/openrouter-generate/internal/iostreams"
 
 	"github.com/spf13/cobra"
 )
