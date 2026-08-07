@@ -65,8 +65,23 @@ type GenerateOptions struct {
 
 func NewCmdGenerate(f *cmdutil.Factory, runF func(*GenerateOptions) error) *cobra.Command {
 	opts := &GenerateOptions{
-		IOStreams:  f.IOStreams,
-		OpenRouter: f.OpenRouter,
+		IOStreams:         f.IOStreams,
+		OpenRouter:        f.OpenRouter,
+		Model:             "",
+		Prompt:            "",
+		N:                 0,
+		Size:              "",
+		Quality:           "",
+		OutputFormat:      "",
+		OutputCompression: 0,
+		CompressionSet:    false,
+		AspectRatio:       "",
+		Resolution:        "",
+		Background:        "",
+		Seed:              0,
+		SeedSet:           false,
+		InputReferences:   nil,
+		Out:               "",
 	}
 
 	cmd := &cobra.Command{
@@ -105,7 +120,7 @@ them to disk. Requires the OPENROUTER_API_KEY environment variable.`,
 	fl.StringVar(&opts.Background, "background", "", "Background: auto|transparent|opaque")
 	fl.Int64Var(&opts.Seed, "seed", 0, "Seed for deterministic generation")
 	fl.StringArrayVar(&opts.InputReferences, "input-reference", nil,
-		"Reference image (URL or base64) for image-to-image; repeatable, max 16")
+		"Reference image (file path, URL, or base64) for image-to-image; repeatable, max 16")
 
 	_ = cmd.MarkFlagRequired("model")
 	_ = cmd.MarkFlagRequired("prompt")
@@ -142,22 +157,31 @@ func validateOptions(opts *GenerateOptions) error {
 		return cmdutil.FlagErrorf(
 			"invalid output-compression: %d (expected 0-%d)", opts.OutputCompression, maxCompression)
 	}
+	if len(opts.InputReferences) > maxInputReferences {
+		return cmdutil.FlagErrorf(
+			"too many input-reference values: %d (max %d)", len(opts.InputReferences), maxInputReferences)
+	}
+	if slices.Contains(opts.InputReferences, "") {
+		return cmdutil.FlagErrorf("input-reference values must not be empty")
+	}
 	return nil
 }
 
 // buildRequest translates CLI options into the wire request.
 func buildRequest(opts *GenerateOptions) openrouter.ImageRequest {
 	req := openrouter.ImageRequest{
-		Model:           opts.Model,
-		Prompt:          opts.Prompt,
-		N:               opts.N,
-		Size:            opts.Size,
-		Quality:         opts.Quality,
-		OutputFormat:    opts.OutputFormat,
-		AspectRatio:     opts.AspectRatio,
-		Resolution:      opts.Resolution,
-		Background:      opts.Background,
-		InputReferences: opts.InputReferences,
+		Model:             opts.Model,
+		Prompt:            opts.Prompt,
+		N:                 opts.N,
+		Size:              opts.Size,
+		Quality:           opts.Quality,
+		OutputFormat:      opts.OutputFormat,
+		OutputCompression: nil,
+		AspectRatio:       opts.AspectRatio,
+		Resolution:        opts.Resolution,
+		Background:        opts.Background,
+		Seed:              nil,
+		InputReferences:   opts.InputReferences,
 	}
 	if opts.CompressionSet {
 		req.OutputCompression = &opts.OutputCompression
@@ -173,6 +197,12 @@ func runGenerate(ctx context.Context, opts *GenerateOptions) error {
 	if err != nil {
 		return err
 	}
+
+	refs, err := resolveInputReferences(opts.InputReferences)
+	if err != nil {
+		return err
+	}
+	opts.InputReferences = refs
 
 	ios := opts.IOStreams
 	var resp *openrouter.ImageResponse

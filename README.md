@@ -48,10 +48,14 @@ orimage generate \
   --output-format webp \
   --aspect-ratio 16:9 \
   --seed 42 \
-  --input-reference https://example.com/style.png
+  --input-reference ./style.png
 ```
 
 With `-n 3`, files land as `market-1.png`, `market-2.png`, `market-3.png`.
+
+`--input-reference` (repeatable, max 16) accepts a local file path, an HTTP(S) URL, or raw
+base64. Local files are read and sent as base64 data URIs — no need to host them anywhere.
+URLs are fetched by OpenRouter server-side, so they must be publicly reachable.
 
 Discover models (agents: use `--json` and pipe to `jq`):
 

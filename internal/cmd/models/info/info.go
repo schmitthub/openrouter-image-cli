@@ -25,6 +25,8 @@ func NewCmdInfo(f *cmdutil.Factory, runF func(*InfoOptions) error) *cobra.Comman
 	opts := &InfoOptions{
 		IOStreams:  f.IOStreams,
 		OpenRouter: f.OpenRouter,
+		Model:      "",
+		JSON:       false,
 	}
 
 	cmd := &cobra.Command{
@@ -55,12 +57,20 @@ func runInfo(ctx context.Context, opts *InfoOptions) error {
 		return err
 	}
 
-	eps, err := client.GetImageModelEndpoints(ctx, opts.Model)
+	ios := opts.IOStreams
+	var eps *openrouter.ModelEndpoints
+	err = ios.RunWithProgress("Fetching model", func() error {
+		var infoErr error
+		eps, infoErr = client.GetImageModelEndpoints(ctx, opts.Model)
+		if infoErr != nil {
+			return fmt.Errorf("fetching model endpoints: %w", infoErr)
+		}
+		return nil
+	})
 	if err != nil {
-		return fmt.Errorf("fetching model endpoints: %w", err)
+		return err
 	}
 
-	ios := opts.IOStreams
 	if opts.JSON {
 		out, jsonErr := cmdutil.JSONStringify(eps, true)
 		if jsonErr != nil {
@@ -69,6 +79,11 @@ func runInfo(ctx context.Context, opts *InfoOptions) error {
 		fmt.Fprint(ios.Out, out)
 		return nil
 	}
+
+	if pagerErr := ios.StartPager(); pagerErr != nil {
+		fmt.Fprintf(ios.ErrOut, "failed to start pager: %v\n", pagerErr)
+	}
+	defer ios.StopPager()
 
 	cs := ios.ColorScheme()
 	fmt.Fprintln(ios.Out, cs.Bold(eps.ID))

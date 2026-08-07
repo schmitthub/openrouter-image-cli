@@ -24,6 +24,7 @@ func NewCmdList(f *cmdutil.Factory, runF func(*ListOptions) error) *cobra.Comman
 	opts := &ListOptions{
 		IOStreams:  f.IOStreams,
 		OpenRouter: f.OpenRouter,
+		JSON:       false,
 	}
 
 	cmd := &cobra.Command{
@@ -51,12 +52,20 @@ func runList(ctx context.Context, opts *ListOptions) error {
 		return err
 	}
 
-	models, err := client.ListImageModels(ctx)
+	ios := opts.IOStreams
+	var models []openrouter.ImageModel
+	err = ios.RunWithProgress("Fetching models", func() error {
+		var listErr error
+		models, listErr = client.ListImageModels(ctx)
+		if listErr != nil {
+			return fmt.Errorf("listing image models: %w", listErr)
+		}
+		return nil
+	})
 	if err != nil {
-		return fmt.Errorf("listing image models: %w", err)
+		return err
 	}
 
-	ios := opts.IOStreams
 	if opts.JSON {
 		out, jsonErr := cmdutil.JSONStringify(models, true)
 		if jsonErr != nil {
@@ -66,15 +75,35 @@ func runList(ctx context.Context, opts *ListOptions) error {
 		return nil
 	}
 
+	if pagerErr := ios.StartPager(); pagerErr != nil {
+		fmt.Fprintf(ios.ErrOut, "failed to start pager: %v\n", pagerErr)
+	}
+	defer ios.StopPager()
+
+	if !ios.IsStdoutTTY() {
+		// Piped: plain tab-separated rows, no header, machine-friendly.
+		for _, m := range models {
+			fmt.Fprintf(ios.Out, "%s\t%s\t%s\t%v\n",
+				m.ID, m.Name, strings.Join(m.Architecture.InputModalities, ","), m.SupportsStreaming)
+		}
+		return nil
+	}
+
+	cs := ios.ColorScheme()
 	const tabWidth, padding = 4, 2
 	tw := tabwriter.NewWriter(ios.Out, 0, tabWidth, padding, ' ', 0)
 	fmt.Fprintln(tw, "ID\tNAME\tINPUT\tSTREAMING")
 	for _, m := range models {
-		fmt.Fprintf(tw, "%s\t%s\t%s\t%v\n",
-			m.ID, m.Name, strings.Join(m.Architecture.InputModalities, ","), m.SupportsStreaming)
+		streaming := cs.FailureIcon()
+		if m.SupportsStreaming {
+			streaming = cs.SuccessIcon()
+		}
+		fmt.Fprintf(tw, "%s\t%s\t%s\t%s\n",
+			m.ID, m.Name, strings.Join(m.Architecture.InputModalities, ","), streaming)
 	}
 	if flushErr := tw.Flush(); flushErr != nil {
 		return fmt.Errorf("writing table: %w", flushErr)
 	}
+	fmt.Fprintln(ios.ErrOut, cs.Grayf("%d models", len(models)))
 	return nil
 }

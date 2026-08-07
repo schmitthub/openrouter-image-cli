@@ -213,6 +213,47 @@ func Test_runGenerate(t *testing.T) {
 		}
 	})
 
+	t.Run("local input reference sent as data URI", func(t *testing.T) {
+		dir := t.TempDir()
+		refPath := filepath.Join(dir, "ref.png")
+		require.NoError(t, os.WriteFile(refPath, pngFixture(), 0o644))
+
+		var gotBody []byte
+		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			gotBody, _ = io.ReadAll(r.Body)
+			_ = json.NewEncoder(w).Encode(map[string]any{
+				"created": 1,
+				"data": []map[string]string{{
+					"b64_json":   base64.StdEncoding.EncodeToString([]byte("img")),
+					"media_type": "image/png",
+				}},
+			})
+		}))
+		t.Cleanup(srv.Close)
+		client := openrouter.New("k", openrouter.WithBaseURL(srv.URL))
+
+		ios, _, _, _ := iostreams.Test()
+		opts := &GenerateOptions{
+			IOStreams:  ios,
+			OpenRouter: func() (*openrouter.Client, error) { return client, nil },
+			Model:      "m",
+			Prompt:     "p",
+			Out:        filepath.Join(dir, "out.png"),
+			InputReferences: []string{
+				refPath,
+				"https://example.com/style.png",
+			},
+		}
+		require.NoError(t, runGenerate(t.Context(), opts))
+
+		var req struct {
+			InputReferences []string `json:"input_references"`
+		}
+		require.NoError(t, json.Unmarshal(gotBody, &req))
+		want := "data:image/png;base64," + base64.StdEncoding.EncodeToString(pngFixture())
+		assert.Equal(t, []string{want, "https://example.com/style.png"}, req.InputReferences)
+	})
+
 	t.Run("api error surfaces", func(t *testing.T) {
 		srv := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) {
 			w.WriteHeader(http.StatusPaymentRequired)
