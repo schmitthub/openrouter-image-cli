@@ -76,7 +76,9 @@ Intended as the query engine for OpenRouter JSON responses; currently unused by 
 **`internal/openrouter`** — hand-rolled OpenRouter API client (no SDK dep). `New(key, opts...)`
 / `NewFromEnv()` (reads `OPENROUTER_API_KEY`); shared `doJSON`/`getJSON` helpers in `http.go`
 handle auth/attribution headers and error parsing; non-2xx becomes `*APIError`
-(status/code/message). Endpoints: `GenerateImage` (POST `/images`, base64 payloads),
+(status/code/message). Endpoints: `GenerateImage` (POST `/images`, base64 payloads;
+`ImageRequest.Provider` carries the `provider` routing object — order/only/ignore/sort/
+allow_fallbacks plus per-slug passthrough `Options`),
 `ListImageModels` (GET `/images/models`), `GetImageModelEndpoints`
 (GET `/images/models/{id}/endpoints` — per-provider params + pricing; there is no bare
 `/images/models/{id}` resource). `WithBaseURL` exists for httptest servers. The Factory
@@ -98,7 +100,12 @@ v1.21 source). The Factory exposes it as `Config func() (config.Config, error)` 
 `sync.OnceValues` — lazy, memoized, keyless commands never touch the filesystem.
 `generate` fills unset flags from config in `applyConfigDefaults`; `--model` is
 enforced in `validateOptions` (not `MarkFlagRequired`) so a configured default can
-satisfy it. The package never prints — errors return to callers. Subcommands follow
+satisfy it. Provider routing persists under `provider.<setting>` (`sort`, `order`,
+`only`, `ignore`, `allow_fallbacks`) with typed accessors on the interface; slug
+lists accept YAML sequences or comma-separated strings. Passthrough defaults nest
+as `provider.options.<slug>.<key>` — `Set` coerces values (int/float/bool) so they
+persist typed, and viper lowercases every key, so case-sensitive passthrough keys
+(e.g. `cachedContent`) can only be sent via `--provider-option`. The package never prints — errors return to callers. Subcommands follow
 the repo convention: `internal/cmd/config` is the parent, `get`/`set`/`list`/`path`
 each live in their own subpackage.
 
@@ -150,7 +157,7 @@ Mirrors `schmitthub/clawker` (minus its embed/BPF machinery):
 ## Open work
 
 - Streaming (`stream: true`, SSE partial images) is not implemented in
-  `internal/openrouter`; neither is the `provider` routing object.
+  `internal/openrouter`.
 - `models list/info --json` emit compact single-line JSON (machine-oriented).
 - Homebrew tap publishing is stubbed out in `.goreleaser.yaml` (commented `homebrew_casks`
   block) — needs a `schmitthub/homebrew-tap` repo and a `HOMEBREW_TAP_GITHUB_TOKEN` secret

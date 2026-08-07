@@ -173,6 +173,107 @@ func TestSaveNeverPersistsEnv(t *testing.T) {
 	assert.Contains(t, string(raw), "aspect_ratio")
 }
 
+func TestProviderAccessorsFromFile(t *testing.T) {
+	dir := t.TempDir()
+	t.Setenv(config.EnvConfigDir, dir)
+	writeConfig(t, dir, `
+provider:
+  sort: price
+  order:
+    - fal
+    - replicate
+  only: a, b
+  allow_fallbacks: false
+  options:
+    black-forest-labs:
+      steps: 40
+      guidance: 3.5
+`)
+	cfg, err := config.New()
+	require.NoError(t, err)
+
+	assert.Equal(t, "price", cfg.ProviderSort())
+	assert.Equal(t, []string{"fal", "replicate"}, cfg.ProviderOrder(), "YAML sequence form")
+	assert.Equal(t, []string{"a", "b"}, cfg.ProviderOnly(), "comma-separated string form")
+	assert.Nil(t, cfg.ProviderIgnore())
+	allow, ok := cfg.ProviderAllowFallbacks()
+	assert.True(t, ok)
+	assert.False(t, allow)
+	assert.Equal(t, map[string]map[string]any{
+		"black-forest-labs": {"steps": 40, "guidance": 3.5},
+	}, cfg.ProviderOptions())
+}
+
+func TestProviderAccessorsFromEnv(t *testing.T) {
+	cfg, _ := newInDir(t)
+	assert.Empty(t, cfg.ProviderSort())
+	_, ok := cfg.ProviderAllowFallbacks()
+	assert.False(t, ok)
+
+	t.Setenv("ORGEN_PROVIDER_SORT", "throughput")
+	t.Setenv("ORGEN_PROVIDER_ORDER", "x,y")
+	t.Setenv("ORGEN_PROVIDER_ALLOW_FALLBACKS", "false")
+
+	assert.Equal(t, "throughput", cfg.ProviderSort())
+	assert.Equal(t, []string{"x", "y"}, cfg.ProviderOrder())
+	allow, ok := cfg.ProviderAllowFallbacks()
+	assert.True(t, ok)
+	assert.False(t, allow)
+}
+
+func TestProviderSetSaveRoundtrip(t *testing.T) {
+	cfg, _ := newInDir(t)
+
+	require.NoError(t, cfg.Set("provider.allow_fallbacks", "false"))
+	require.NoError(t, cfg.Set("provider.order", "fal,replicate"))
+	require.NoError(t, cfg.Set("provider.options.black-forest-labs.steps", "40"))
+	require.NoError(t, cfg.Set("provider.options.black-forest-labs.raw", "not-a-number"))
+	require.NoError(t, cfg.Save())
+
+	reloaded, err := config.New()
+	require.NoError(t, err)
+	allow, ok := reloaded.ProviderAllowFallbacks()
+	assert.True(t, ok)
+	assert.False(t, allow, "persisted as a native boolean")
+	assert.Equal(t, []string{"fal", "replicate"}, reloaded.ProviderOrder())
+	options := reloaded.ProviderOptions()
+	require.Contains(t, options, "black-forest-labs")
+	assert.EqualValues(t, 40, options["black-forest-labs"]["steps"], "persisted as a native number")
+	assert.Equal(t, "not-a-number", options["black-forest-labs"]["raw"])
+}
+
+func TestProviderAllowFallbacksRejectsNonBool(t *testing.T) {
+	cfg, _ := newInDir(t)
+	err := cfg.Set("provider.allow_fallbacks", "maybe")
+	require.Error(t, err)
+	assert.Contains(t, err.Error(), "must be a boolean")
+}
+
+func TestProviderOptionsKeyShape(t *testing.T) {
+	cfg, _ := newInDir(t)
+	for _, key := range []string{"provider.options", "provider.options.black-forest-labs"} {
+		err := cfg.Set(key, "x")
+		require.Error(t, err, key)
+		assert.Contains(t, err.Error(), "provider.options.<slug>.<key>")
+		_, err = cfg.Get(key)
+		require.Error(t, err, key)
+	}
+	require.NoError(t, cfg.Set("provider.optionsish", "x"), "prefix look-alike keys stay addressable")
+}
+
+func TestSaveNeverPersistsProviderEnv(t *testing.T) {
+	cfg, dir := newInDir(t)
+	t.Setenv("ORGEN_PROVIDER_SORT", "latency")
+
+	require.NoError(t, cfg.Set("provider.order", "fal"))
+	require.NoError(t, cfg.Save())
+
+	raw, err := os.ReadFile(filepath.Join(dir, "config.yaml"))
+	require.NoError(t, err)
+	assert.NotContains(t, string(raw), "latency")
+	assert.Contains(t, string(raw), "order")
+}
+
 func TestSetRejectsUnknownKey(t *testing.T) {
 	cfg, _ := newInDir(t)
 	err := cfg.Set("bogus", "v")

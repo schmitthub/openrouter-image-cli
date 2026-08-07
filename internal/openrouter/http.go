@@ -15,18 +15,28 @@ const maxErrorBody = 1 << 20 // 1 MiB
 // doJSON performs an API request with an optional JSON body and decodes the
 // JSON response into out. Non-2xx responses return a *APIError.
 func (c *Client) doJSON(ctx context.Context, method, path string, reqBody, out any) error {
+	_, err := c.doJSONHeader(ctx, method, path, reqBody, out)
+	return err
+}
+
+// doJSONHeader is doJSON, additionally returning the response headers for
+// callers that need response metadata OpenRouter only exposes there
+// (e.g. X-Provider-Name).
+func (c *Client) doJSONHeader(
+	ctx context.Context, method, path string, reqBody, out any,
+) (http.Header, error) {
 	var body io.Reader
 	if reqBody != nil {
 		encoded, err := json.Marshal(reqBody)
 		if err != nil {
-			return fmt.Errorf("encoding request: %w", err)
+			return nil, fmt.Errorf("encoding request: %w", err)
 		}
 		body = bytes.NewReader(encoded)
 	}
 
 	httpReq, err := http.NewRequestWithContext(ctx, method, c.baseURL+path, body)
 	if err != nil {
-		return fmt.Errorf("building request: %w", err)
+		return nil, fmt.Errorf("building request: %w", err)
 	}
 	httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
 	if reqBody != nil {
@@ -44,18 +54,18 @@ func (c *Client) doJSON(ctx context.Context, method, path string, reqBody, out a
 
 	resp, err := c.httpClient.Do(httpReq)
 	if err != nil {
-		return fmt.Errorf("calling openrouter: %w", err)
+		return nil, fmt.Errorf("calling openrouter: %w", err)
 	}
 	defer resp.Body.Close()
 
 	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return parseAPIError(resp)
+		return nil, parseAPIError(resp)
 	}
 
 	if decErr := json.NewDecoder(resp.Body).Decode(out); decErr != nil {
-		return fmt.Errorf("decoding response: %w", decErr)
+		return nil, fmt.Errorf("decoding response: %w", decErr)
 	}
-	return nil
+	return resp.Header, nil
 }
 
 // getJSON performs a GET request and decodes the JSON response into out.

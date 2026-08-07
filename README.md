@@ -79,6 +79,37 @@ orgen models info qwen/qwen-image-3 --json
 `models info` shows exactly which parameters each provider accepts (enum values, ranges) and
 what each image costs — check it before generating with an unfamiliar model.
 
+### Provider routing
+
+Models are often served by several providers. Routing flags control which one gets the
+request:
+
+```sh
+orgen generate -m black-forest-labs/flux.2-pro -p "a dramatic portrait" \
+  --provider-sort price \        # price | throughput | latency | exacto
+  --provider-order fal,replicate # try these in order; also: --provider-only, --provider-ignore
+```
+
+`--no-provider-fallbacks` fails with the upstream error instead of falling back to the next
+eligible provider.
+
+Provider-specific parameters that OpenRouter merely passes through go via
+`--provider-option <slug>.<key>=<value>` (repeatable). Don't invent keys: each endpoint
+advertises what it accepts as `allowed_passthrough_parameters` in `models info`:
+
+```sh
+orgen models info black-forest-labs/flux.2-pro --json \
+  | jq '.endpoints[] | {slug: .provider_slug, passthrough: .allowed_passthrough_parameters}'
+orgen generate -m black-forest-labs/flux.2-pro -p "a dramatic portrait" \
+  --provider-option black-forest-labs.steps=40 \
+  --provider-option black-forest-labs.guidance=3
+```
+
+Values that parse as numbers or booleans are sent typed. When an option names a provider or
+key the model's endpoints don't advertise, `orgen` warns on stderr — the API silently drops
+unrecognized keys — but never blocks the request; the check is skipped if the endpoint
+lookup fails.
+
 ## Configuration
 
 Persist defaults so you can stop repeating flags:
@@ -92,7 +123,13 @@ orgen config path                        # where config.yaml lives
 
 Settings live in `config.yaml` under your OS config directory (`$XDG_CONFIG_HOME/orgen` on
 Linux), or `$ORGEN_CONFIG_DIR` when set. Keys: `model`, `aspect_ratio`, `output_format`,
-`output_compression`, plus provider routing settings nested as `provider.<setting>`.
+`output_compression`, plus provider routing settings nested as `provider.<setting>`:
+`provider.sort`, `provider.order`, `provider.only`, `provider.ignore`,
+`provider.allow_fallbacks`, and passthrough defaults as `provider.options.<slug>.<key>`.
+Slug lists are comma-separated (`orgen config set provider.order fal,replicate`); in the
+YAML file a sequence works too. One caveat: config keys are case-insensitive (stored
+lowercased), so a case-sensitive passthrough key like Google's `cachedContent` can't be
+persisted — pass it with `--provider-option`, which preserves case.
 
 Every key can be overridden per-invocation by an `ORGEN_*` environment variable — dots
 become underscores, so `provider.sort` reads `ORGEN_PROVIDER_SORT`. Precedence, highest
