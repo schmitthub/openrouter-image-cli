@@ -5,10 +5,10 @@ package models
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/schmitthub/openrouter-image-cli/internal/cmdutil"
+	"github.com/schmitthub/openrouter-generate/internal/cmdutil"
 
-	infoCmd "github.com/schmitthub/openrouter-image-cli/internal/cmd/models/info"
-	listCmd "github.com/schmitthub/openrouter-image-cli/internal/cmd/models/list"
+	infoCmd "github.com/schmitthub/openrouter-generate/internal/cmd/models/info"
+	listCmd "github.com/schmitthub/openrouter-generate/internal/cmd/models/list"
 )
 
 func NewCmdModels(f *cmdutil.Factory) *cobra.Command {

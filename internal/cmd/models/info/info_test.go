@@ -8,8 +8,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/schmitthub/openrouter-image-cli/internal/iostreams"
-	"github.com/schmitthub/openrouter-image-cli/internal/openrouter"
+	"github.com/schmitthub/openrouter-generate/internal/iostreams"
+	"github.com/schmitthub/openrouter-generate/internal/openrouter"
 )
 
 const infoBody = `{"id": "qwen/qwen-image-3", "endpoints": [{

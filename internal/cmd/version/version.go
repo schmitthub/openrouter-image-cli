@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/schmitthub/openrouter-image-cli/internal/cmdutil"
+	"github.com/schmitthub/openrouter-generate/internal/cmdutil"
 
 	"github.com/spf13/cobra"
 )
@@ -32,5 +32,5 @@ func Format(version, buildDate string) string {
 		dateStr = fmt.Sprintf(" (%s)", buildDate)
 	}
 
-	return fmt.Sprintf("orimage version %s%s\n", version, dateStr)
+	return fmt.Sprintf("orgen version %s%s\n", version, dateStr)
 }

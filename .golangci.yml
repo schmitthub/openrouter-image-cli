@@ -7,7 +7,7 @@ formatters:
   settings:
     goimports:
       local-prefixes:
-        - github.com/schmitthub/openrouter-image-cli
+        - github.com/schmitthub/openrouter-generate
     golines:
       max-len: 120
 issues:

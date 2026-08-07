@@ -16,10 +16,10 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/schmitthub/openrouter-image-cli/internal/cmdutil"
-	"github.com/schmitthub/openrouter-image-cli/internal/config"
-	"github.com/schmitthub/openrouter-image-cli/internal/iostreams"
-	"github.com/schmitthub/openrouter-image-cli/internal/openrouter"
+	"github.com/schmitthub/openrouter-generate/internal/cmdutil"
+	"github.com/schmitthub/openrouter-generate/internal/config"
+	"github.com/schmitthub/openrouter-generate/internal/iostreams"
+	"github.com/schmitthub/openrouter-generate/internal/openrouter"
 )
 
 func TestNewCmdGenerate(t *testing.T) {
@@ -298,8 +298,8 @@ func Test_outPath(t *testing.T) {
 		i, n    int
 		want    string
 	}{
-		{name: "empty out single", out: "", created: 99, ext: "png", i: 0, n: 1, want: "orimage-99.png"},
-		{name: "empty out multi", out: "", created: 99, ext: "webp", i: 1, n: 3, want: "orimage-99-2.webp"},
+		{name: "empty out single", out: "", created: 99, ext: "png", i: 0, n: 1, want: "orgen-99.png"},
+		{name: "empty out multi", out: "", created: 99, ext: "webp", i: 1, n: 3, want: "orgen-99-2.webp"},
 		{name: "explicit single", out: "a/b.png", created: 99, ext: "png", i: 0, n: 1, want: "a/b.png"},
 		{name: "explicit multi", out: "b.png", created: 99, ext: "png", i: 2, n: 3, want: "b-3.png"},
 		{name: "explicit multi no ext", out: "b", created: 99, ext: "jpg", i: 0, n: 2, want: "b-1.jpg"},

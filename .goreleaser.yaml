@@ -1,16 +1,16 @@
 # yaml-language-server: $schema=https://goreleaser.com/static/schema.json
 version: 2
 
-project_name: orimage
+project_name: orgen
 
 # Two build IDs, one per arch, each emitting linux/darwin/windows. Pure Go
 # (CGO_ENABLED=0) so the host cross-compiles every target freely. Unlike
 # clawker there are no shared go:embed staging paths, so no build hooks and no
 # `--parallelism 1` requirement.
 builds:
-  - id: orimage-amd64
-    main: ./cmd/orimage
-    binary: orimage
+  - id: orgen-amd64
+    main: ./cmd/orgen
+    binary: orgen
     env:
       - CGO_ENABLED=0
     goos:
@@ -24,13 +24,13 @@ builds:
     mod_timestamp: "{{ .CommitTimestamp }}"
     ldflags:
       - -s -w
-      - -X github.com/schmitthub/openrouter-image-cli/internal/build.Version={{.Version}}
-      - -X github.com/schmitthub/openrouter-image-cli/internal/build.Date={{.CommitDate}}
-      - -X github.com/schmitthub/openrouter-image-cli/internal/build.Revision={{.FullCommit}}
+      - -X github.com/schmitthub/openrouter-generate/internal/build.Version={{.Version}}
+      - -X github.com/schmitthub/openrouter-generate/internal/build.Date={{.CommitDate}}
+      - -X github.com/schmitthub/openrouter-generate/internal/build.Revision={{.FullCommit}}
 
-  - id: orimage-arm64
-    main: ./cmd/orimage
-    binary: orimage
+  - id: orgen-arm64
+    main: ./cmd/orgen
+    binary: orgen
     env:
       - CGO_ENABLED=0
     goos:
@@ -44,17 +44,17 @@ builds:
     mod_timestamp: "{{ .CommitTimestamp }}"
     ldflags:
       - -s -w
-      - -X github.com/schmitthub/openrouter-image-cli/internal/build.Version={{.Version}}
-      - -X github.com/schmitthub/openrouter-image-cli/internal/build.Date={{.CommitDate}}
-      - -X github.com/schmitthub/openrouter-image-cli/internal/build.Revision={{.FullCommit}}
+      - -X github.com/schmitthub/openrouter-generate/internal/build.Version={{.Version}}
+      - -X github.com/schmitthub/openrouter-generate/internal/build.Date={{.CommitDate}}
+      - -X github.com/schmitthub/openrouter-generate/internal/build.Revision={{.FullCommit}}
 
 archives:
   - id: default
     # Both build IDs feed this single archive set so we get one archive per
     # (os, arch) regardless of which build ID produced the binary.
     ids:
-      - orimage-amd64
-      - orimage-arm64
+      - orgen-amd64
+      - orgen-arm64
     formats:
       - tar.gz
     format_overrides:
@@ -72,21 +72,21 @@ archives:
 # whole release if the token is missing.
 #
 # homebrew_casks:
-#   - name: orimage
+#   - name: orgen
 #     ids: [default]
-#     binaries: [orimage]
+#     binaries: [orgen]
 #     repository:
 #       owner: schmitthub
 #       name: homebrew-tap
 #       token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
-#     homepage: https://github.com/schmitthub/openrouter-image-cli
+#     homepage: https://github.com/schmitthub/openrouter-generate
 #     description: "Generate images with OpenRouter image models"
 #     license: "MIT"
 #     hooks:
 #       post:
 #         install: |
 #           if OS.mac?
-#           system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/orimage"]
+#           system_command "/usr/bin/xattr", args: ["-dr", "com.apple.quarantine", "#{staged_path}/orgen"]
 #           end
 
 checksum:
@@ -98,7 +98,7 @@ sboms:
 
 # Keyless Sigstore signature over checksums.txt. Verify with:
 #   cosign verify-blob --bundle checksums.txt.sigstore.json \
-#     --certificate-identity-regexp '^https://github\.com/schmitthub/openrouter-image-cli/\.github/workflows/release-build\.yml@' \
+#     --certificate-identity-regexp '^https://github\.com/schmitthub/openrouter-generate/\.github/workflows/release-build\.yml@' \
 #     --certificate-oidc-issuer https://token.actions.githubusercontent.com checksums.txt
 signs:
   - cmd: cosign
@@ -125,6 +125,6 @@ changelog:
 release:
   github:
     owner: schmitthub
-    name: openrouter-image-cli
+    name: openrouter-generate
   prerelease: auto
   name_template: "{{.ProjectName}} v{{.Version}}"

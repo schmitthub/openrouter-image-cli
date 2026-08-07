@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/schmitthub/openrouter-image-cli/internal/query"
+	"github.com/schmitthub/openrouter-generate/internal/query"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

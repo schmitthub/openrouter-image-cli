@@ -1,13 +1,13 @@
 // Package skill is the parent command for managing the agent skill
-// bundled with the orimage binary.
+// bundled with the orgen binary.
 package skill
 
 import (
 	"github.com/spf13/cobra"
 
-	"github.com/schmitthub/openrouter-image-cli/internal/cmdutil"
+	"github.com/schmitthub/openrouter-generate/internal/cmdutil"
 
-	installCmd "github.com/schmitthub/openrouter-image-cli/internal/cmd/skill/install"
+	installCmd "github.com/schmitthub/openrouter-generate/internal/cmd/skill/install"
 )
 
 func NewCmdSkill(f *cmdutil.Factory) *cobra.Command {

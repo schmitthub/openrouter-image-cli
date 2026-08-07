@@ -6,9 +6,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/schmitthub/openrouter-image-cli/internal/cmdutil"
-	"github.com/schmitthub/openrouter-image-cli/internal/iostreams"
-	"github.com/schmitthub/openrouter-image-cli/internal/skill"
+	"github.com/schmitthub/openrouter-generate/internal/cmdutil"
+	"github.com/schmitthub/openrouter-generate/internal/iostreams"
+	"github.com/schmitthub/openrouter-generate/internal/skill"
 )
 
 type InstallOptions struct {
@@ -18,7 +18,7 @@ type InstallOptions struct {
 	// as its own subdirectory.
 	Dir string
 
-	// Force removes an existing orimage/ skill directory in Dir and
+	// Force removes an existing orgen/ skill directory in Dir and
 	// rewrites it from scratch.
 	Force bool
 }
@@ -32,21 +32,21 @@ func NewCmdInstall(f *cmdutil.Factory, runF func(*InstallOptions) error) *cobra.
 
 	cmd := &cobra.Command{
 		Use:   "install <directory>",
-		Short: "Write the orimage/ skill directory into a skills directory",
-		Long: `Install the agent skill embedded in the orimage binary by writing its
-skill directory, orimage/, into the given skills directory:
+		Short: "Write the orgen/ skill directory into a skills directory",
+		Long: `Install the agent skill embedded in the orgen binary by writing its
+skill directory, orgen/, into the given skills directory:
 
   <directory>/
-  └── orimage/
+  └── orgen/
       └── SKILL.md
 
 <directory> is created if missing; if it exists it must be a directory,
-and entries in it other than orimage/ are never touched. If
-<directory>/orimage already exists the install fails; pass --force to
+and entries in it other than orgen/ are never touched. If
+<directory>/orgen already exists the install fails; pass --force to
 delete it and rewrite the current skill from scratch (its file layout
-may change between orimage versions).`,
-		Example: `  orimage skill install ~/.agents/skills
-  orimage skill install --force .agents/skills`,
+may change between orgen versions).`,
+		Example: `  orgen skill install ~/.agents/skills
+  orgen skill install --force .agents/skills`,
 		Args: cobra.ExactArgs(1),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.Dir = args[0]
@@ -60,7 +60,7 @@ may change between orimage versions).`,
 		},
 	}
 
-	cmd.Flags().BoolVar(&opts.Force, "force", false, "Delete an existing orimage/ skill directory and rewrite it")
+	cmd.Flags().BoolVar(&opts.Force, "force", false, "Delete an existing orgen/ skill directory and rewrite it")
 
 	return cmd
 }
@@ -95,6 +95,6 @@ func runInstall(opts *InstallOptions) error {
 	for _, path := range written {
 		fmt.Fprintf(ios.Out, "%s %s\n", cs.SuccessIcon(), path)
 	}
-	fmt.Fprintln(ios.ErrOut, cs.Grayf("installed orimage skill into %s (%d file(s))", opts.Dir, len(written)))
+	fmt.Fprintln(ios.ErrOut, cs.Grayf("installed orgen skill into %s (%d file(s))", opts.Dir, len(written)))
 	return nil
 }

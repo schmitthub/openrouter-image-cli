@@ -9,7 +9,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/schmitthub/openrouter-image-cli/internal/config"
+	"github.com/schmitthub/openrouter-generate/internal/config"
 )
 
 // newInDir points the config package at a temp dir and loads it.
@@ -92,10 +92,10 @@ func TestEnvOverridesFile(t *testing.T) {
 	dir := t.TempDir()
 	t.Setenv(config.EnvConfigDir, dir)
 	writeConfig(t, dir, "model: from-file\noutput_compression: 10\n")
-	t.Setenv("ORIMAGE_MODEL", "from-env")
-	t.Setenv("ORIMAGE_OUTPUT_COMPRESSION", "90")
-	t.Setenv("ORIMAGE_ASPECT_RATIO", "9:16")
-	t.Setenv("ORIMAGE_PROVIDER_SORT", "throughput")
+	t.Setenv("ORGEN_MODEL", "from-env")
+	t.Setenv("ORGEN_OUTPUT_COMPRESSION", "90")
+	t.Setenv("ORGEN_ASPECT_RATIO", "9:16")
+	t.Setenv("ORGEN_PROVIDER_SORT", "throughput")
 
 	cfg, err := config.New()
 	require.NoError(t, err)
@@ -115,7 +115,7 @@ func TestEnvAloneSetsCompression(t *testing.T) {
 	_, ok := cfg.OutputCompression()
 	require.False(t, ok)
 
-	t.Setenv("ORIMAGE_OUTPUT_COMPRESSION", "55")
+	t.Setenv("ORGEN_OUTPUT_COMPRESSION", "55")
 	n, ok := cfg.OutputCompression()
 	assert.True(t, ok)
 	assert.Equal(t, 55, n)
@@ -162,7 +162,7 @@ func TestSavePreservesExistingEntries(t *testing.T) {
 
 func TestSaveNeverPersistsEnv(t *testing.T) {
 	cfg, dir := newInDir(t)
-	t.Setenv("ORIMAGE_MODEL", "from-env")
+	t.Setenv("ORGEN_MODEL", "from-env")
 
 	require.NoError(t, cfg.Set("aspect_ratio", "16:9"))
 	require.NoError(t, cfg.Save())
@@ -222,6 +222,6 @@ func TestPathDefaultsToUserConfigDir(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", t.TempDir()) // keep the real user config out of the test
 	cfg, err := config.New()
 	require.NoError(t, err)
-	assert.Equal(t, "orimage", filepath.Base(filepath.Dir(cfg.Path())))
+	assert.Equal(t, "orgen", filepath.Base(filepath.Dir(cfg.Path())))
 	assert.Equal(t, "config.yaml", filepath.Base(cfg.Path()))
 }

@@ -7,7 +7,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/schmitthub/openrouter-image-cli/internal/openrouter"
+	"github.com/schmitthub/openrouter-generate/internal/openrouter"
 )
 
 const (
@@ -26,7 +26,7 @@ var mediaTypeExt = map[string]string{ //nolint:gochecknoglobals // static lookup
 
 // saveImages decodes every image in resp and writes it to disk, returning
 // the written paths. out semantics:
-//   - "": orimage-<created>.<ext> in the current directory
+//   - "": orgen-<created>.<ext> in the current directory
 //   - path with one image: written exactly there
 //   - path with multiple images: index inserted before the extension
 //     (img.png -> img-1.png, img-2.png, ...)
@@ -64,9 +64,9 @@ func ext(mediaType string) string {
 func outPath(out string, created int64, extension string, i, n int) string {
 	if out == "" {
 		if n == 1 {
-			return fmt.Sprintf("orimage-%d.%s", created, extension)
+			return fmt.Sprintf("orgen-%d.%s", created, extension)
 		}
-		return fmt.Sprintf("orimage-%d-%d.%s", created, i+1, extension)
+		return fmt.Sprintf("orgen-%d-%d.%s", created, i+1, extension)
 	}
 	if n == 1 {
 		return out

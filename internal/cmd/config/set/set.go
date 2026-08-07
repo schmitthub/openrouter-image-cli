@@ -1,4 +1,4 @@
-// Package set implements "orimage config set".
+// Package set implements "orgen config set".
 package set
 
 import (
@@ -6,9 +6,9 @@ import (
 
 	"github.com/spf13/cobra"
 
-	"github.com/schmitthub/openrouter-image-cli/internal/cmdutil"
-	"github.com/schmitthub/openrouter-image-cli/internal/config"
-	"github.com/schmitthub/openrouter-image-cli/internal/iostreams"
+	"github.com/schmitthub/openrouter-generate/internal/cmdutil"
+	"github.com/schmitthub/openrouter-generate/internal/config"
+	"github.com/schmitthub/openrouter-generate/internal/iostreams"
 )
 
 // setArgCount is the <key> <value> pair "config set" expects.
@@ -33,9 +33,9 @@ func NewCmdSet(f *cmdutil.Factory, runF func(*SetOptions) error) *cobra.Command 
 	cmd := &cobra.Command{
 		Use:   "set <key> <value>",
 		Short: "Persist a default value for a config key",
-		Example: `  orimage config set model google/gemini-2.5-flash-image
-  orimage config set aspect_ratio 16:9
-  orimage config set provider.sort price`,
+		Example: `  orgen config set model google/gemini-2.5-flash-image
+  orgen config set aspect_ratio 16:9
+  orgen config set provider.sort price`,
 		Args: cmdutil.ExactArgs(setArgCount, "expected a config key and a value"),
 		RunE: func(cmd *cobra.Command, args []string) error {
 			opts.Key, opts.Value = args[0], args[1]

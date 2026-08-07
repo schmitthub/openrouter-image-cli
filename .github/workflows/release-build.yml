@@ -10,7 +10,7 @@ name: Release Build
 # against this workflow's identity:
 #
 #   gh attestation verify <artifact> --owner schmitthub \
-#     --signer-workflow schmitthub/openrouter-image-cli/.github/workflows/release-build.yml
+#     --signer-workflow schmitthub/openrouter-generate/.github/workflows/release-build.yml
 #
 # Permissions are declared on the calling job in release.yml (reusable
 # workflows inherit job permissions, not workflow-level permissions).
@@ -57,10 +57,10 @@ jobs:
       #   - 6 release archives ({linux,darwin,windows} x {amd64,arm64}) —
       #     goreleaser already names them correctly, copied as-is.
       #   - 6 standalone binaries from goreleaser dist/. Redundant with the
-      #     archives (same bytes) but lets forensics verify a loose `orimage`
+      #     archives (same bytes) but lets forensics verify a loose `orgen`
       #     binary by digest without unpacking.
       #
-      # Goreleaser dist/ binary layout: dist/<build-id>_<goos>_<goarch>[_<variant>]/orimage
+      # Goreleaser dist/ binary layout: dist/<build-id>_<goos>_<goarch>[_<variant>]/orgen
       # The trailing `*` glob in cp covers the GOAMD64/GOARM64 variant suffix
       # (e.g. `_v1`, `_v8.0`) which differs across goreleaser versions.
       - name: Stage attestation subjects
@@ -71,14 +71,14 @@ jobs:
           rm -rf "$SUBJECTS"
           mkdir -p "$SUBJECTS"
 
-          cp dist/orimage_*.tar.gz dist/orimage_*.zip "$SUBJECTS/"
+          cp dist/orgen_*.tar.gz dist/orgen_*.zip "$SUBJECTS/"
 
-          cp dist/orimage-amd64_linux_amd64*/orimage       "${SUBJECTS}/orimage_${VERSION}_linux_amd64"
-          cp dist/orimage-amd64_darwin_amd64*/orimage      "${SUBJECTS}/orimage_${VERSION}_darwin_amd64"
-          cp dist/orimage-amd64_windows_amd64*/orimage.exe "${SUBJECTS}/orimage_${VERSION}_windows_amd64.exe"
-          cp dist/orimage-arm64_linux_arm64*/orimage       "${SUBJECTS}/orimage_${VERSION}_linux_arm64"
-          cp dist/orimage-arm64_darwin_arm64*/orimage      "${SUBJECTS}/orimage_${VERSION}_darwin_arm64"
-          cp dist/orimage-arm64_windows_arm64*/orimage.exe "${SUBJECTS}/orimage_${VERSION}_windows_arm64.exe"
+          cp dist/orgen-amd64_linux_amd64*/orgen       "${SUBJECTS}/orgen_${VERSION}_linux_amd64"
+          cp dist/orgen-amd64_darwin_amd64*/orgen      "${SUBJECTS}/orgen_${VERSION}_darwin_amd64"
+          cp dist/orgen-amd64_windows_amd64*/orgen.exe "${SUBJECTS}/orgen_${VERSION}_windows_amd64.exe"
+          cp dist/orgen-arm64_linux_arm64*/orgen       "${SUBJECTS}/orgen_${VERSION}_linux_arm64"
+          cp dist/orgen-arm64_darwin_arm64*/orgen      "${SUBJECTS}/orgen_${VERSION}_darwin_arm64"
+          cp dist/orgen-arm64_windows_arm64*/orgen.exe "${SUBJECTS}/orgen_${VERSION}_windows_arm64.exe"
 
           ls -la "$SUBJECTS"
 

@@ -1,7 +1,7 @@
-BINARY_NAME := orimage
-MODULE := github.com/schmitthub/openrouter-image-cli
-ORIMAGE_VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
-ORIMAGE_REVISION ?= $(shell git rev-parse HEAD 2>/dev/null || echo "unknown")
+BINARY_NAME := orgen
+MODULE := github.com/schmitthub/openrouter-generate
+ORGEN_VERSION ?= $(shell git describe --tags --always --dirty 2>/dev/null || echo "dev")
+ORGEN_REVISION ?= $(shell git rev-parse HEAD 2>/dev/null || echo "unknown")
 GO ?= go
 # Append to (not clobber) any inherited GOFLAGS: worktree containers set
 # GOFLAGS=-buildvcs=false because Go cannot stamp linked worktrees there
@@ -12,8 +12,8 @@ GOFLAGS := -trimpath $(GOFLAGS)
 # Dev builds leave build.Date empty; release goreleaser stamps it via
 # {{.CommitDate}} in .goreleaser.yaml.
 LDFLAGS := -s -w \
-	-X '$(MODULE)/internal/build.Version=$(ORIMAGE_VERSION)' \
-	-X '$(MODULE)/internal/build.Revision=$(ORIMAGE_REVISION)'
+	-X '$(MODULE)/internal/build.Version=$(ORGEN_VERSION)' \
+	-X '$(MODULE)/internal/build.Revision=$(ORGEN_REVISION)'
 BIN_DIR := bin
 DIST_DIR := dist
 
@@ -29,7 +29,7 @@ else
 	TEST_CMD_VERBOSE = $(GO) test -v
 endif
 
-# build the orimage binary
+# build the orgen binary
 .PHONY: build
 build:
 	@echo "Building $(BINARY_NAME)..."

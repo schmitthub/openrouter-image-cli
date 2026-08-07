@@ -7,14 +7,14 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/schmitthub/openrouter-image-cli/internal/cmdutil"
-	"github.com/schmitthub/openrouter-image-cli/internal/config"
-	"github.com/schmitthub/openrouter-image-cli/internal/iostreams"
+	"github.com/schmitthub/openrouter-generate/internal/cmdutil"
+	"github.com/schmitthub/openrouter-generate/internal/config"
+	"github.com/schmitthub/openrouter-generate/internal/iostreams"
 )
 
 func TestGetPrintsValue(t *testing.T) {
 	t.Setenv(config.EnvConfigDir, t.TempDir())
-	t.Setenv("ORIMAGE_MODEL", "env/model")
+	t.Setenv("ORGEN_MODEL", "env/model")
 	ios, _, stdout, _ := iostreams.Test()
 	f := &cmdutil.Factory{IOStreams: ios, Config: config.New}
 
