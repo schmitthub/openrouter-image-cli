@@ -1,0 +1,165 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/schmitthub/clawker/v2026.8.2/docs/schemas/clawker.schema.json
+agent:
+  editor: nano
+  enable_shared_dir: true
+  from_env:
+    - GH_TOKEN
+    - CONTEXT7_API_KEY
+    - OPENROUTER_API_KEY
+harnesses:
+  claude:
+    config:
+      strategy: copy
+    post_init: |
+      claude mcp add -s local serena -- uvx --from git+https://github.com/oraios/serena@ad7cf51ec3cd69f4e1cc6d2eab679f8876897b7a serena start-mcp-server --context claude-code --project "$(pwd)" --enable-web-dashboard false
+      claude mcp add -s local -t http deepwiki https://mcp.deepwiki.com/mcp
+      claude mcp add --scope local context7 -- npx -y @upstash/context7-mcp --api-key "$CONTEXT7_API_KEY"
+build:
+  stacks:
+    - go
+    - python
+    - node
+  packages:
+    - ripgrep
+    - build-essential
+    - zip
+  instructions:
+    root_run:
+      - |-
+        GH_VERSION=2.97.0 && \
+          ARCH=$(dpkg --print-architecture) && \
+          GH_FILE="gh_${GH_VERSION}_linux_${ARCH}.tar.gz" && \
+          CHECKSUMS_FILE="gh_${GH_VERSION}_checksums.txt" && \
+          curl -fsSLO "https://github.com/cli/cli/releases/download/v${GH_VERSION}/${GH_FILE}" && \
+          curl -fsSLO "https://github.com/cli/cli/releases/download/v${GH_VERSION}/${CHECKSUMS_FILE}" && \
+          grep " ${GH_FILE}\$" "${CHECKSUMS_FILE}" | sha256sum -c - && \
+          tar -C /usr/local -xzf "${GH_FILE}" --strip-components=1 && \
+          rm -f "${GH_FILE}" "${CHECKSUMS_FILE}"
+      - |-
+        COSIGN_VERSION=v3.0.5 && \
+          ARCH=$(dpkg --print-architecture) && \
+          case "$ARCH" in \
+            amd64) COSIGN_ARCH=amd64 ;; \
+            arm64) COSIGN_ARCH=arm64 ;; \
+            *) \
+              echo "Unsupported architecture for Cosign: $ARCH" >&2; \
+              exit 1; \
+              ;; \
+          esac && \
+          COSIGN_FILE="cosign-linux-${COSIGN_ARCH}" && \
+          CHECKSUMS_FILE="cosign_checksums.txt" && \
+          curl -fsSLO "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/${COSIGN_FILE}" && \
+          curl -fsSLO "https://github.com/sigstore/cosign/releases/download/${COSIGN_VERSION}/${CHECKSUMS_FILE}" && \
+          grep " ${COSIGN_FILE}\$" "${CHECKSUMS_FILE}" | sha256sum -c - && \
+          install -m 755 "${COSIGN_FILE}" /usr/local/bin/cosign && \
+          rm -f "${COSIGN_FILE}" "${CHECKSUMS_FILE}"
+      - |-
+        SYFT_VERSION=v1.42.3 && \
+          ARCH=$(dpkg --print-architecture) && \
+          case "$ARCH" in \
+            amd64) SYFT_ARCH=amd64 ;; \
+            arm64) SYFT_ARCH=arm64 ;; \
+            armhf) SYFT_ARCH=armv7 ;; \
+            *) \
+              echo "Unsupported architecture for Syft: $ARCH" >&2; \
+              exit 1; \
+              ;; \
+          esac && \
+          SYFT_FILE="syft_${SYFT_VERSION#v}_linux_${SYFT_ARCH}.tar.gz" && \
+          CHECKSUMS_FILE="syft_${SYFT_VERSION#v}_checksums.txt" && \
+          curl -fsSLO "https://github.com/anchore/syft/releases/download/${SYFT_VERSION}/${SYFT_FILE}" && \
+          curl -fsSLO "https://github.com/anchore/syft/releases/download/${SYFT_VERSION}/${CHECKSUMS_FILE}" && \
+          grep " ${SYFT_FILE}\$" "${CHECKSUMS_FILE}" | sha256sum -c - && \
+          tar -C /usr/local/bin -xzf "${SYFT_FILE}" syft && \
+          rm -f "${SYFT_FILE}" "${CHECKSUMS_FILE}"
+    user_run:
+      - uv tool install pre-commit --with pre-commit-uv
+      - go install golang.org/x/tools/gopls@latest
+      - go install github.com/golangci/golangci-lint/v2/cmd/golangci-lint@latest
+      - go install github.com/matryer/moq@latest
+      - go install github.com/goreleaser/goreleaser/v2@latest
+      - uv tool install semgrep
+security:
+  docker_socket: false
+  firewall:
+    add_domains:
+      - proxy.golang.org
+      - sum.golang.org
+      - storage.googleapis.com
+      - docs.openclaw.ai
+      - sigs.k8s.io
+      - goreleaser.com
+    rules:
+      - action: allow
+        dst: openrouter.ai
+        insecure_skip_tls_verify: false
+        port: "443"
+        proto: https
+        path_default: deny
+        path_rules:
+          - action: allow
+            path: ~/docs(/.*)?
+          # full API surface for orimage development
+          - action: allow
+            path: ~/api(/.*)?
+      - dst: github.com
+        proto: ssh
+        port: "22"
+        action: allow
+      - action: allow
+        dst: github.com
+        insecure_skip_tls_verify: false
+        path_default: deny
+        path_rules:
+          - action: allow
+            path: /openclaw/
+          - action: allow
+            path: /schmitthub/
+          - action: allow
+            path: /gitleaks/gitleaks/
+          - action: allow
+            path: /oraios/serena/
+          - action: allow
+            path: ~/golangci/golangci-lint(\.git)?(/.*)?
+          - action: allow
+            path: /koalaman/shellcheck/
+          - action: allow
+            path: /artempyanykh/marksman/
+          - action: allow
+            path: /anthropics/claude-code/
+          - action: allow
+            path: /tekwizely/pre-commit-golang
+          - action: allow
+            path: ~/addyosmani/agent-skills(/.*)?
+      - action: allow
+        dst: api.github.com
+        insecure_skip_tls_verify: false
+        path_default: allow
+        path_rules:
+          - action: allow
+            path: ~/repos/openclaw(/.*)?
+          - action: allow
+            path: ~/repos/schmitthub/openrouter-image-cli(/.*)?
+          - action: allow
+            path: /repos/upstash/context7/
+          - action: allow
+            path: /repos/oraios/serena/commits/
+      - action: allow
+        dst: raw.githubusercontent.com
+        insecure_skip_tls_verify: false
+        path_default: deny
+        path_rules:
+          - action: allow
+            path: ~/openclaw(/.*)?
+          - action: allow
+            path: ~/repos/schmitthub/openrouter-image-cli(/.*)?
+          - action: allow
+            path: /upstash/context7/master/plugins/claude/context7/skills/context7-mcp/
+          - action: allow
+            path: /oraios/serena/
+          - action: allow
+            path: /anchore/syft/main/
+          - action: allow
+            path: /addyosmani/agent-skills/
+          - action: allow
+            path: /anthropics/claude-code/

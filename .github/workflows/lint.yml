@@ -1,0 +1,31 @@
+name: Lint
+
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+  actions: read
+
+jobs:
+  golangci-lint:
+    name: golangci-lint
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      # golangci-lint's new-from-merge-base needs the `main` ref on disk, but the
+      # PR checkout is a detached HEAD with no local main branch. fetch-depth: 0
+      # provides the history; this maps origin's main to a local ref so the
+      # merge-base resolves. This workflow only runs on PRs (never on a push to
+      # main, where main is the checked-out branch and the fetch would refuse).
+      - name: Fetch main for new-from-merge-base
+        run: git fetch --no-tags origin main:main
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@ba0d7d2ec06a0ea1cb5fa41b2e4a3ab91d21278a # v9.3.0
+        with:
+          version: v2.12.2

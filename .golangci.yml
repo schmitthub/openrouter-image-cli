@@ -1,0 +1,243 @@
+formatters:
+  enable:
+    - goimports
+    - golines
+    - gofumpt
+    - swaggo
+  settings:
+    goimports:
+      local-prefixes:
+        - github.com/schmitthub/openrouter-image-cli
+    golines:
+      max-len: 120
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  new-from-merge-base: main
+linters:
+  default: all
+  disable:
+    - wsl_v5
+    - wsl
+    - nlreturn
+    - varnamelen
+    - lll
+    - tagalign
+    - godot
+    - funcorder
+    - noinlineerr
+    - err113
+    - paralleltest
+  exclusions:
+    presets:
+      - std-error-handling
+      - common-false-positives
+    rules:
+      - linters: [godot]
+        source: 'TODO'
+      - linters: [revive]
+        text: 'should have a package comment'
+      - linters: [revive]
+        text: 'exported \S+ \S+ should have comment( \(or a comment on this block\))? or be unexported'
+      - linters: [revive]
+        source: '// ?(nolint|TODO)'
+        text: 'package comment should be of the form ".+"'
+      - linters: [revive, staticcheck]
+        source: '// ?(nolint|TODO)'
+        text: 'comment on exported \S+ \S+ should be of the form ".+"'
+      - linters:
+          - bodyclose
+          - dupl
+          - errcheck
+          - exhaustruct
+          - funlen
+          - goconst
+          - gosec
+          - noctx
+          - testpackage
+          - wrapcheck
+        path: '_test\.go'
+      - linters:
+          - bodyclose
+          - dupl
+          - errcheck
+          - funlen
+          - goconst
+          - gosec
+          - noctx
+          - wrapcheck
+        path: (^|/)mock/|.*_mock\.go|stubs\.go
+    warn-unused: true
+  settings:
+    cyclop:
+      max-complexity: 15
+      package-average: 8.0
+    depguard:
+      rules:
+        "deprecated":
+          deny:
+            - desc: Use google.golang.org/protobuf instead, see https://developers.google.com/protocol-buffers/docs/reference/go/faq#modules
+              pkg: github.com/golang/protobuf
+            - desc: Use github.com/google/uuid instead, satori's package is not maintained
+              pkg: github.com/satori/go.uuid
+            - desc: Use github.com/gofrs/uuid/v5 or later, it was not a go module before v5
+              pkg: github.com/gofrs/uuid$
+          files:
+            - "$all"
+        "non-main files":
+          deny:
+            - desc: Use log/slog instead, see https://go.dev/blog/slog
+              pkg: log$
+          files:
+            - "!**/main.go"
+        "non-test files":
+          deny:
+            - desc: Use math/rand/v2 instead, see https://go.dev/blog/randv2
+              pkg: math/rand$
+          files:
+            - "!$test"
+    embeddedstructfieldcheck:
+      forbid-mutex: true
+    errcheck:
+      check-blank: true
+      check-type-assertions: true
+      # flag registration errors only on a flag name mismatch, a programmer
+      # error the command constructor tests catch
+      exclude-functions:
+        - (*github.com/spf13/cobra.Command).MarkFlagRequired
+        - (*github.com/spf13/cobra.Command).MarkFlagFilename
+        - (*github.com/spf13/cobra.Command).RegisterFlagCompletionFunc
+    exhaustive:
+      check:
+        - switch
+        - map
+    exhaustruct:
+      allow-empty-returns: true
+      exclude:
+        # options-style structs: zero values are meaningful "not set" defaults
+        - ^github.com/schmitthub/openrouter-image-cli/internal/openrouter.ImageRequest$
+        - ^github.com/schmitthub/openrouter-image-cli/internal/cmd/generate.GenerateOptions$
+        - ^github.com/schmitthub/openrouter-image-cli/internal/cmdutil.Factory$
+        - ^net/http.Client$
+        - ^net/http.Cookie$
+        - ^net/http.Request$
+        - ^net/http.Response$
+        - ^net/http.Server$
+        - ^net/http.Transport$
+        - ^net/url.URL$
+        - ^os/exec.Cmd$
+        - ^reflect.StructField$
+        - ^github.com/Shopify/sarama.Config$
+        - ^github.com/Shopify/sarama.ProducerMessage$
+        - ^github.com/mitchellh/mapstructure.DecoderConfig$
+        - ^github.com/prometheus/client_golang/.+Opts$
+        - ^github.com/spf13/cobra.Command$
+        - ^github.com/spf13/cobra.CompletionOptions$
+        - ^github.com/stretchr/testify/mock.Mock$
+        - ^github.com/testcontainers/testcontainers-go.+Request$
+        - ^github.com/testcontainers/testcontainers-go.FromDockerfile$
+        - ^golang.org/x/tools/go/analysis.Analyzer$
+        - ^google.golang.org/protobuf/.+Options$
+        - ^gopkg.in/yaml.v3.Node$
+    forbidigo:
+      forbid:
+        - msg: "AI INSTRUCTION: Do not panic. Handle the error and return it up the call stack."
+          pattern: '^panic$'
+    funlen:
+      lines: 60
+      statements: 40
+    gochecksumtype:
+      default-signifies-exhaustive: false
+    gocognit:
+      min-complexity: 12
+    gocritic:
+      settings:
+        captLocal:
+          paramsOnly: false
+        underef:
+          skipRecvDeref: false
+    godoclint:
+      enable:
+        - no-unused-link
+        - require-stdlib-doclink
+    govet:
+      disable:
+        - fieldalignment
+      enable-all: true
+      settings:
+        shadow:
+          strict: true
+    inamedparam:
+      skip-single-param: true
+    mnd:
+      ignored-functions:
+        - args.Error
+        - flag.Arg
+        - flag.Duration.*
+        - flag.Float.*
+        - flag.Int.*
+        - flag.Uint.*
+        - os.Chmod
+        - os.Mkdir.*
+        - os.OpenFile
+        - os.WriteFile
+        - prometheus.ExponentialBuckets.*
+        - prometheus.LinearBuckets
+    nakedret:
+      max-func-lines: 0
+    nolintlint:
+      allow-no-explanation: [funlen, gocognit, golines]
+      require-explanation: true
+      require-specific: true
+    perfsprint:
+      strconcat: false
+    reassign:
+      patterns:
+        - ".*"
+    revive:
+      rules:
+        - name: unexported-return
+        - name: time-naming
+        - name: errorf
+        - name: error-naming
+        - name: error-strings
+        - name: receiver-naming
+        - name: context-as-argument
+        - name: context-keys-type
+        - name: import-shadowing
+      severity: error
+    rowserrcheck:
+      packages:
+        - github.com/jmoiron/sqlx
+    sloglint:
+      context: scope
+      no-global: all
+    staticcheck:
+      checks:
+        - all
+        - -ST1000
+        - -ST1016
+        - -QF1008
+    tagliatelle:
+      case:
+        rules:
+          json: snake
+          toml: snake
+          yaml: snake
+    usetesting:
+      os-temp-dir: true
+    wrapcheck:
+      ignore-sigs:
+        - .Errorf(
+        - errors.New(
+        - errors.Unwrap(
+        - errors.Join(
+        # our own error/progress helpers: FlagError IS the wrapper, and
+        # RunWithProgress passes its closure's (already wrapped) error through
+        - .FlagErrorf(
+        - .FlagErrorWrap(
+        - .RunWithProgress(
+run:
+  issues-exit-code: 1
+  tests: true
+version: "2"

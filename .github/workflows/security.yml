@@ -1,0 +1,124 @@
+name: Security
+
+on:
+  workflow_call:
+    inputs:
+      run_dependency_review:
+        required: false
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+  pull-requests: read
+  security-events: write
+  actions: read
+
+jobs:
+  semgrep:
+    name: Semgrep SAST
+    runs-on: ubuntu-24.04
+    container:
+      # Pin version for reproducibility. Update periodically:
+      #   1. Check latest: https://hub.docker.com/r/semgrep/semgrep/tags
+      #   2. Update tag here AND expected version in .pre-commit-config.yaml
+      image: semgrep/semgrep:1.156.0@sha256:a3d49dc967b8534a6a76628e50c51cbfe33eb7195dc2feab1fdc0f100852c8ef
+    timeout-minutes: 10
+    # Dependabot PRs have limited token permissions and only change
+    # go.mod/go.sum — SAST scanning is not useful on dependency changes
+    if: (github.actor != 'dependabot[bot]')
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      # PRs: incremental scan (only new findings since base branch)
+      # Push to main: full scan (no baseline)
+      - name: Semgrep
+        run: |
+          if [ -n "$BASE_SHA" ]; then
+            echo "Incremental scan against base $BASE_SHA"
+            semgrep scan --sarif --output semgrep.sarif --baseline-commit "$BASE_SHA" --config p/golang --config p/security-audit --config p/github-actions --config .semgrep/ --error
+          else
+            echo "Full scan (no baseline)"
+            semgrep scan --sarif --output semgrep.sarif --config p/golang --config p/security-audit --config p/github-actions --config .semgrep/ --error
+          fi
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+
+      - name: Upload Semgrep SARIF
+        if: always() && hashFiles('semgrep.sarif') != ''
+        uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
+        with:
+          sarif_file: semgrep.sarif
+          category: semgrep
+
+  gitleaks:
+    name: Gitleaks Secrets
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      # Use raw CLI instead of gitleaks-action so --baseline-path can be added
+      # later without swapping tooling (the v2 action does not expose it).
+      - name: Install gitleaks
+        run: |
+          set -euo pipefail
+          GITLEAKS_VERSION=8.30.1
+          ARCHIVE="gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          BASE_URL="https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}"
+
+          curl -sSfL "${BASE_URL}/${ARCHIVE}" -o "${ARCHIVE}"
+          CHECKSUMS="gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          curl -sSfL "${BASE_URL}/${CHECKSUMS}" -o "${CHECKSUMS}"
+          grep " ${ARCHIVE}$" "${CHECKSUMS}" | sha256sum --check
+          sudo tar xzf "${ARCHIVE}" -C /usr/local/bin gitleaks
+          rm -f "${ARCHIVE}" "${CHECKSUMS}"
+          gitleaks version
+
+      # No --baseline-path: this repo has no accepted findings yet. If a false
+      # positive lands, generate gitleaks-report.json and add
+      # `--baseline-path gitleaks-report.json` here AND in .pre-commit-config.yaml.
+      - name: Gitleaks
+        run: gitleaks git --report-format sarif --report-path results.sarif
+
+      - name: Upload Gitleaks SARIF
+        if: always() && hashFiles('results.sarif') != ''
+        uses: github/codeql-action/upload-sarif@f205ea1c3313d32999d8d6a48b4f6530d4437b38 # v4.37.4
+        with:
+          sarif_file: results.sarif
+          category: gitleaks
+
+  dependency-review:
+    name: Dependency Review
+    if: ${{ inputs.run_dependency_review }}
+    runs-on: ubuntu-24.04
+    steps:
+      - name: 'Checkout Repository'
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: 'Dependency Review'
+        uses: actions/dependency-review-action@a1d282b36b6f3519aa1f3fc636f609c47dddb294 # v5.0.0
+
+  govulncheck:
+    name: govulncheck SCA
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+
+      - name: Set up Go
+        uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        with:
+          go-version-file: go.mod
+
+      # Install and run govulncheck directly instead of using
+      # golang/govulncheck-action — that action does its own `actions/checkout`
+      # internally, clobbering the working tree. Manual install keeps it intact.
+      - name: Install govulncheck
+        run: go install golang.org/x/vuln/cmd/govulncheck@d1f380186385b4f64e00313f31743df8e4b89a77 # v1.1.4
+
+      - name: Run govulncheck
+        run: govulncheck ./...

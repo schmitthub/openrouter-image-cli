@@ -1,0 +1,33 @@
+name: Main
+
+on:
+  push:
+    branches: [main]
+
+concurrency:
+  group: main-${{ github.sha }}
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  pull-requests: read
+  security-events: write
+  actions: read
+
+jobs:
+  security:
+    name: Security
+    uses: ./.github/workflows/security.yml
+    permissions:
+      contents: read
+      pull-requests: read
+      security-events: write
+      actions: read
+    with:
+      run_dependency_review: false
+
+  test:
+    name: Test
+    uses: ./.github/workflows/test.yml
+    permissions:
+      contents: read

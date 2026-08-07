@@ -1,0 +1,50 @@
+# Clawker Ignore File
+#
+# In bind mode, listed directories are masked with empty tmpfs overlays
+# so the host's platform-specific binaries (e.g. macOS Darwin node_modules/.bin)
+# don't bleed into the Linux container. The container installs its own
+# dependencies into the tmpfs, which is ephemeral.
+#
+# In snapshot mode, listed directories are simply excluded from the copy —
+# they don't exist in the container at all, allowing it to create its own.
+#
+# Syntax is similar to .gitignore. Negation patterns are not yet supported.
+# File-level patterns (*.env, *.pem) cannot be enforced in bind mode —
+# only directory-level masking works.
+#
+# Uncomment the lines relevant to your stack:
+
+# ── JavaScript / TypeScript ──
+# node_modules/
+# .next/
+# .nuxt/
+
+# ── Python ──
+# .venv/
+# __pycache__/
+# .mypy_cache/
+
+# ── Go ──
+# vendor/
+
+# ── Ruby ──
+# vendor/bundle/
+
+# ── Rust ──
+# target/
+
+# ── Java / Kotlin ──
+# .gradle/
+# build/
+
+# ── .NET ──
+# bin/
+# obj/
+
+# ── PHP ──
+# vendor/
+
+# ── Build outputs ──
+dist/
+bin/
+# out/

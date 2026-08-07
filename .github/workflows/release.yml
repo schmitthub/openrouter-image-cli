@@ -1,0 +1,70 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - "v*"
+
+# Per-job permissions only — reusable workflows inherit from the calling job,
+# not from a workflow-level block. The `validate` job needs read-only contents
+# for fetch; the `build` job declares the full superset that the reusable's
+# steps require (goreleaser release write, Sigstore OIDC, attestation API).
+
+jobs:
+  validate:
+    name: Validate
+    runs-on: ubuntu-24.04
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+
+      - name: Validate tag is semver
+        env:
+          TAG: ${{ github.ref_name }}
+        run: |
+          if ! [[ "$TAG" =~ ^v[0-9]+\.[0-9]+\.[0-9]+(-[a-zA-Z0-9._-]+)?(\+[a-zA-Z0-9._-]+)?$ ]]; then
+            echo "::error::Tag '$TAG' is not valid semver (expected vMAJOR.MINOR.PATCH[-prerelease])"
+            exit 1
+          fi
+
+      - name: Validate tag is on main
+        env:
+          SHA: ${{ github.sha }}
+        run: |
+          git fetch origin main
+          if ! git merge-base --is-ancestor "$SHA" origin/main; then
+            echo "::error::Tag must point to a commit on the main branch"
+            exit 1
+          fi
+
+      # A tag whose commit never passed the PR gates would otherwise ship
+      # unlinted, untested code. Requires the Main workflow to have succeeded
+      # for this exact SHA.
+      - name: Validate tagged commit passed CI on main
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          CONCLUSION=$(gh api \
+            "repos/${REPO}/actions/workflows/main.yml/runs?head_sha=${SHA}&status=completed" \
+            --jq '[.workflow_runs[] | select(.conclusion == "success")] | length')
+          if [ "$CONCLUSION" -eq 0 ]; then
+            echo "::error::No successful 'Main' workflow run for ${SHA}. Push to main and let CI pass before tagging."
+            exit 1
+          fi
+
+  build:
+    name: Build
+    needs: validate
+    permissions:
+      contents: write          # goreleaser publishes the GitHub release
+      id-token: write          # Sigstore OIDC token for attestation signing
+      attestations: write      # GitHub attestation API write
+      artifact-metadata: write # new in actions/attest@v4 — required even though listed only in the README Usage section, not the inline Examples block
+    uses: ./.github/workflows/release-build.yml
