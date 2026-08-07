@@ -1,7 +1,9 @@
 package generate
 
 import (
+	"bytes"
 	"encoding/base64"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"testing"
@@ -66,10 +68,12 @@ func Test_resolveInputReferences(t *testing.T) {
 		assert.Equal(t, []string{want}, refs)
 	})
 
-	t.Run("missing path errors", func(t *testing.T) {
+	t.Run("missing path reports stat and decode errors", func(t *testing.T) {
 		_, err := resolveInputReferences([]string{filepath.Join(dir, "nope.png")})
 
-		assert.ErrorContains(t, err, "no such file and not valid base64")
+		require.ErrorIs(t, err, fs.ErrNotExist)
+		require.ErrorContains(t, err, "no such file")
+		require.ErrorContains(t, err, "not valid base64")
 	})
 
 	t.Run("broken symlink errors", func(t *testing.T) {
@@ -78,7 +82,36 @@ func Test_resolveInputReferences(t *testing.T) {
 
 		_, err := resolveInputReferences([]string{link})
 
-		assert.ErrorContains(t, err, "no such file and not valid base64")
+		require.ErrorIs(t, err, fs.ErrNotExist)
+		require.ErrorContains(t, err, "not valid base64")
+	})
+
+	t.Run("unreadable parent dir surfaces the stat error", func(t *testing.T) {
+		if os.Geteuid() == 0 {
+			t.Skip("permission checks are bypassed for root")
+		}
+		locked := filepath.Join(dir, "locked")
+		require.NoError(t, os.Mkdir(locked, 0o755))
+		// "logo" is deliberately valid base64: without the fs.ErrNotExist
+		// classification this ref would silently pass through as raw base64.
+		inside := filepath.Join(locked, "logo")
+		require.NoError(t, os.WriteFile(inside, pngFixture(), 0o644))
+		require.NoError(t, os.Chmod(locked, 0o000))
+		t.Cleanup(func() { _ = os.Chmod(locked, 0o755) })
+
+		_, err := resolveInputReferences([]string{inside})
+
+		require.ErrorIs(t, err, fs.ErrPermission)
+		assert.NotContains(t, err.Error(), "no such file")
+	})
+
+	t.Run("long raw base64 skips the filesystem probe", func(t *testing.T) {
+		payload := base64.StdEncoding.EncodeToString(bytes.Repeat([]byte("x"), 4000))
+
+		refs, err := resolveInputReferences([]string{payload})
+
+		require.NoError(t, err)
+		assert.Equal(t, []string{payload}, refs)
 	})
 
 	t.Run("empty is nil", func(t *testing.T) {
@@ -95,13 +128,23 @@ func Test_detectMediaType(t *testing.T) {
 }
 
 func Test_validateOptions_inputReferences(t *testing.T) {
-	refs := make([]string, 17)
-	for i := range refs {
-		refs[i] = "https://example.com/r.png"
-	}
-	opts := &GenerateOptions{Model: "m", Prompt: "p", InputReferences: refs}
+	t.Run("too many", func(t *testing.T) {
+		refs := make([]string, 17)
+		for i := range refs {
+			refs[i] = "https://example.com/r.png"
+		}
+		opts := &GenerateOptions{Model: "m", Prompt: "p", InputReferences: refs}
 
-	err := validateOptions(opts)
+		err := validateOptions(opts)
 
-	assert.ErrorContains(t, err, "too many input-reference values: 17 (max 16)")
+		assert.ErrorContains(t, err, "too many input-reference values: 17 (max 16)")
+	})
+
+	t.Run("empty value", func(t *testing.T) {
+		opts := &GenerateOptions{Model: "m", Prompt: "p", InputReferences: []string{""}}
+
+		err := validateOptions(opts)
+
+		assert.ErrorContains(t, err, "input-reference values must not be empty")
+	})
 }

@@ -146,6 +146,9 @@ func validateOptions(opts *GenerateOptions) error {
 		return cmdutil.FlagErrorf(
 			"too many input-reference values: %d (max %d)", len(opts.InputReferences), maxInputReferences)
 	}
+	if slices.Contains(opts.InputReferences, "") {
+		return cmdutil.FlagErrorf("input-reference values must not be empty")
+	}
 	return nil
 }
 
