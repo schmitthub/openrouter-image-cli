@@ -79,6 +79,25 @@ orimage models info qwen/qwen-image-3 --json
 `models info` shows exactly which parameters each provider accepts (enum values, ranges) and
 what each image costs — check it before generating with an unfamiliar model.
 
+## Configuration
+
+Persist defaults so you can stop repeating flags:
+
+```sh
+orimage config set model google/gemini-2.5-flash-image
+orimage config set aspect_ratio 16:9
+orimage config list                        # effective values, key=value per line
+orimage config path                        # where config.yaml lives
+```
+
+Settings live in `config.yaml` under your OS config directory (`$XDG_CONFIG_HOME/orimage` on
+Linux), or `$ORIMAGE_CONFIG_DIR` when set. Keys: `model`, `aspect_ratio`, `output_format`,
+`output_compression`, plus provider routing settings nested as `provider.<setting>`.
+
+Every key can be overridden per-invocation by an `ORIMAGE_*` environment variable — dots
+become underscores, so `provider.sort` reads `ORIMAGE_PROVIDER_SORT`. Precedence, highest
+first: command-line flags, environment variables, config file.
+
 ## Agent skill
 
 The binary embeds an [agent skill](https://docs.openclaw.ai/tools/skills) that teaches

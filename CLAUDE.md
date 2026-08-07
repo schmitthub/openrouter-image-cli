@@ -8,7 +8,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 Module path `github.com/schmitthub/openrouter-image-cli`, binary `orimage`.
 
 Working commands: `generate` (image generation), `models list` / `models info`
-(model catalog), `skill install` (write the embedded agent skill — see
+(model catalog), `config get/set/list/path` (persisted generation defaults —
+see `internal/config`), `skill install` (write the embedded agent skill — see
 `internal/skill` — into a skills directory), `version`.
 
 ## Commands
@@ -45,7 +46,8 @@ internal/cmd/root             assembles the cobra tree; the only place subcomman
 internal/cmd/<name>           one package per subcommand
 ```
 
-**Factory injection.** `cmdutil.Factory` carries `AppVersion` and `IOStreams` and is threaded
+**Factory injection.** `cmdutil.Factory` carries `AppVersion`, `IOStreams`, the deferred
+`OpenRouter` client constructor, and the lazy `Config` loader, and is threaded
 into every `NewCmdX(f *cmdutil.Factory, runF func(*XOptions) error)` constructor. Add new
 dependencies (e.g. an OpenRouter client constructor) as fields on `Factory`, populate them in
 `internal/cmd/factory.New`, and copy them onto the command's `Options` struct in the constructor.
@@ -80,6 +82,25 @@ handle auth/attribution headers and error parsing; non-2xx becomes `*APIError`
 `/images/models/{id}` resource). `WithBaseURL` exists for httptest servers. The Factory
 exposes the client as a deferred `OpenRouter func() (*openrouter.Client, error)` so keyless
 commands (version, help) still run.
+
+**`internal/config`** — viper-backed persisted settings behind a `Config` interface
+(`New()` returns the interface; commands mock it in tests). Keys: `model`,
+`aspect_ratio`, `output_format`, `output_compression`, `provider.<setting>`. File:
+`config.yaml` under `$ORIMAGE_CONFIG_DIR` or `<os.UserConfigDir>/orimage` (XDG).
+Precedence: flags > `ORIMAGE_*` env vars (viper `AutomaticEnv`, dots→underscores) >
+file. Lean on viper's own introspection: key enumeration is `AllKeys()` (scalar keys
+registered via `BindEnv`, NOT `SetDefault` — viper's `IsSet` treats defaults as set,
+which would break `OutputCompression()`'s set-detection), the file location is
+`ConfigFileUsed()`. Two viper instances: `main` (file+env, serves reads) and `file`
+(file+explicit `Set`s only) because viper's `WriteConfig` persists `AllSettings()`,
+which on an env-aware instance would write env overrides to disk (verified in viper
+v1.21 source). The Factory exposes it as `Config func() (config.Config, error)` via
+`sync.OnceValues` — lazy, memoized, keyless commands never touch the filesystem.
+`generate` fills unset flags from config in `applyConfigDefaults`; `--model` is
+enforced in `validateOptions` (not `MarkFlagRequired`) so a configured default can
+satisfy it. The package never prints — errors return to callers. Subcommands follow
+the repo convention: `internal/cmd/config` is the parent, `get`/`set`/`list`/`path`
+each live in their own subpackage.
 
 **`internal/build`** — `Version`/`Date`/`Revision` set via `-ldflags -X`, with a
 `debug.ReadBuildInfo()` fallback for `go install` builds.

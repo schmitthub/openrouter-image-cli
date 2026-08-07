@@ -50,5 +50,18 @@ orimage models info <model-id> --json
 Check `models info` before passing generation flags beyond `-m`/`-p`/`-o` —
 parameter support varies by model and provider.
 
+When the user settles on a model or output preference they keep
+repeating, offer to save it as a persisted default so later runs can
+omit the flag:
+
+```
+orimage config set model google/gemini-2.5-flash-image
+```
+
+`orimage config list` shows every key with its current value; see
+`orimage config --help` for the full command surface. Explicit flags
+always override saved defaults, and `ORIMAGE_*` environment variables
+sit between the two.
+
 Generated file paths print one per line on stdout; cost goes to stderr.
 Failures exit non-zero with the error on stderr.

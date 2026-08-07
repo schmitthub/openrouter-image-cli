@@ -17,6 +17,7 @@ import (
 	"github.com/stretchr/testify/require"
 
 	"github.com/schmitthub/openrouter-image-cli/internal/cmdutil"
+	"github.com/schmitthub/openrouter-image-cli/internal/config"
 	"github.com/schmitthub/openrouter-image-cli/internal/iostreams"
 	"github.com/schmitthub/openrouter-image-cli/internal/openrouter"
 )
@@ -306,6 +307,114 @@ func Test_outPath(t *testing.T) {
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			assert.Equal(t, tt.want, outPath(tt.out, tt.created, tt.ext, tt.i, tt.n))
+		})
+	}
+}
+
+// stubConfig is a canned config.Config for fallback tests.
+type stubConfig struct {
+	model, aspect, format string
+	compression           int
+	compressionSet        bool
+}
+
+func (s stubConfig) Model() string                  { return s.model }
+func (s stubConfig) AspectRatio() string            { return s.aspect }
+func (s stubConfig) OutputFormat() string           { return s.format }
+func (s stubConfig) OutputCompression() (int, bool) { return s.compression, s.compressionSet }
+func (s stubConfig) Provider() map[string]any       { return nil }
+func (s stubConfig) AllKeys() []string              { return nil }
+func (s stubConfig) Get(string) (string, error)     { return "", nil }
+func (s stubConfig) Set(string, string) error       { return nil }
+func (s stubConfig) Save() error                    { return nil }
+func (s stubConfig) Path() string                   { return "" }
+
+func TestGenerateConfigDefaults(t *testing.T) {
+	cfg := stubConfig{
+		model: "cfg/model", aspect: "16:9", format: "webp",
+		compression: 42, compressionSet: true,
+	}
+	tests := []struct {
+		name      string
+		cli       string
+		config    config.Config
+		configErr error
+		wantsOpts GenerateOptions
+		errMsg    string
+	}{
+		{
+			name:   "config fills unset flags",
+			cli:    `-p prompt`,
+			config: cfg,
+			wantsOpts: GenerateOptions{
+				Model: "cfg/model", Prompt: "prompt", AspectRatio: "16:9",
+				OutputFormat: "webp", OutputCompression: 42, CompressionSet: true,
+			},
+		},
+		{
+			name:   "flags beat config",
+			cli:    `-m flag/model -p prompt --aspect-ratio 1:1 --output-format png --output-compression 90`,
+			config: cfg,
+			wantsOpts: GenerateOptions{
+				Model: "flag/model", Prompt: "prompt", AspectRatio: "1:1",
+				OutputFormat: "png", OutputCompression: 90, CompressionSet: true,
+			},
+		},
+		{
+			name:   "empty config still requires model",
+			cli:    `-p prompt`,
+			config: stubConfig{},
+			errMsg: `required flag(s) "model" not set`,
+		},
+		{
+			name:      "config load error surfaces",
+			cli:       `-p prompt`,
+			configErr: errors.New("boom"),
+			errMsg:    "loading config: boom",
+		},
+		{
+			name:   "invalid configured format rejected",
+			cli:    `-p prompt`,
+			config: stubConfig{model: "m", format: "tiff"},
+			errMsg: "invalid output-format: tiff",
+		},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			ios, _, _, _ := iostreams.Test()
+			f := &cmdutil.Factory{
+				IOStreams: ios,
+				Config: func() (config.Config, error) {
+					if tt.configErr != nil {
+						return nil, tt.configErr
+					}
+					return tt.config, nil
+				},
+			}
+			argv, err := shlex.Split(tt.cli)
+			require.NoError(t, err)
+
+			var opts *GenerateOptions
+			cmd := NewCmdGenerate(f, func(o *GenerateOptions) error {
+				opts = o
+				return nil
+			})
+			cmd.SetArgs(argv)
+			cmd.SetOut(io.Discard)
+			cmd.SetErr(io.Discard)
+
+			_, err = cmd.ExecuteC()
+			if tt.errMsg != "" {
+				require.Error(t, err)
+				assert.Contains(t, err.Error(), tt.errMsg)
+				return
+			}
+			require.NoError(t, err)
+			assert.Equal(t, tt.wantsOpts.Model, opts.Model)
+			assert.Equal(t, tt.wantsOpts.AspectRatio, opts.AspectRatio)
+			assert.Equal(t, tt.wantsOpts.OutputFormat, opts.OutputFormat)
+			assert.Equal(t, tt.wantsOpts.OutputCompression, opts.OutputCompression)
+			assert.Equal(t, tt.wantsOpts.CompressionSet, opts.CompressionSet)
 		})
 	}
 }
