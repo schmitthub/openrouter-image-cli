@@ -39,14 +39,20 @@ orgen generate -m <model-id> -p "put the dog from the first image into the scene
   --input-reference ./dog.jpg --input-reference https://example.com/park.png -o combined.png
 ```
 
-Reference order matters in practice: models tend to treat the first
-reference as the primary subject and later ones as secondary material
-(scene, style, target). Put the subject to preserve first, and make the
-prompt refer to references by position ("the first image", "the second
-image"). The API contract does not define ordering semantics — behavior
-is model-specific — so if a multi-reference edit ignores or mishandles
-one of the images, swap the reference order and retry before changing
-the prompt.
+Reference order matters. The OpenRouter API contract does not define
+ordering semantics (behavior is model-specific), but models see the
+references in array order and bind ordinal phrases in the prompt to
+that order — "the first image" is the first `--input-reference`, "the
+second image" the next. Verified empirically (gemini-2.5-flash-image):
+with the prompt "place the subject from the first image into the scene
+from the second image", passing subject-then-scene composited
+correctly, while the swapped order made the model treat the scene as
+the subject — and in one run return no image at all.
+
+So: refer to references by position in the prompt, and pass them in
+exactly that order. If a multi-reference edit ignores or mishandles an
+image — or the model returns no image — check prompt ordinals against
+reference order and swap the references before rewriting the prompt.
 
 When the user asks what models are available, or what a model supports
 and costs:
