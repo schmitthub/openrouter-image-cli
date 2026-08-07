@@ -1,10 +1,11 @@
 package query_test
 
 import (
-	"github.com/schmitthub/openrouter-image-cli/internal/query"
 	"encoding/json"
 	"testing"
 	"time"
+
+	"github.com/schmitthub/openrouter-image-cli/internal/query"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"

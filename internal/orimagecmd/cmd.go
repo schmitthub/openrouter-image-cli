@@ -2,15 +2,16 @@ package orimagecmd
 
 import (
 	"context"
+	"errors"
+	"fmt"
+	"io"
+	"strings"
+
 	"github.com/schmitthub/openrouter-image-cli/internal/build"
 	"github.com/schmitthub/openrouter-image-cli/internal/cmd/factory"
 	"github.com/schmitthub/openrouter-image-cli/internal/cmd/root"
 	"github.com/schmitthub/openrouter-image-cli/internal/cmdutil"
 	"github.com/schmitthub/openrouter-image-cli/internal/iostreams"
-	"errors"
-	"fmt"
-	"io"
-	"strings"
 
 	"github.com/spf13/cobra"
 )

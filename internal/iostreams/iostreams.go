@@ -4,12 +4,6 @@ import (
 	"bytes"
 	"errors"
 	"fmt"
-	"github.com/briandowns/spinner"
-	ghTerm "github.com/cli/go-gh/v2/pkg/term"
-	"github.com/cli/safeexec"
-	"github.com/google/shlex"
-	"github.com/mattn/go-colorable"
-	"github.com/mattn/go-isatty"
 	"io"
 	"os"
 	"os/exec"
@@ -17,6 +11,13 @@ import (
 	"strings"
 	"sync"
 	"time"
+
+	"github.com/briandowns/spinner"
+	ghTerm "github.com/cli/go-gh/v2/pkg/term"
+	"github.com/cli/safeexec"
+	"github.com/google/shlex"
+	"github.com/mattn/go-colorable"
+	"github.com/mattn/go-isatty"
 )
 
 const DefaultWidth = 80

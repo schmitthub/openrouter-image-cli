@@ -116,7 +116,7 @@ linters:
       exclude:
         # options-style structs: zero values are meaningful "not set" defaults
         - ^github.com/schmitthub/openrouter-image-cli/internal/openrouter.ImageRequest$
-        - ^github.com/schmitthub/openrouter-image-cli/internal/cmd/generate.GenerateOptions$
+        - ^github.com/schmitthub/openrouter-image-cli/internal/cmd/.*Options$
         - ^github.com/schmitthub/openrouter-image-cli/internal/cmdutil.Factory$
         - ^net/http.Client$
         - ^net/http.Cookie$

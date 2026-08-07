@@ -1,16 +1,9 @@
 package openrouter
 
 import (
-	"bytes"
 	"context"
-	"encoding/json"
-	"fmt"
-	"io"
 	"net/http"
 )
-
-// maxErrorBody caps how much of an error response body is read.
-const maxErrorBody = 1 << 20 // 1 MiB
 
 // ImageRequest is the request body for POST /images.
 // https://openrouter.ai/docs/api/api-reference/images/generate-an-image
@@ -74,57 +67,9 @@ type ImageResponse struct {
 // GenerateImage calls POST /images and returns the generated images.
 // Non-2xx responses return a *APIError.
 func (c *Client) GenerateImage(ctx context.Context, req ImageRequest) (*ImageResponse, error) {
-	body, err := json.Marshal(req)
-	if err != nil {
-		return nil, fmt.Errorf("encoding image request: %w", err)
-	}
-
-	httpReq, err := http.NewRequestWithContext(
-		ctx, http.MethodPost, c.baseURL+"/images", bytes.NewReader(body))
-	if err != nil {
-		return nil, fmt.Errorf("building image request: %w", err)
-	}
-	httpReq.Header.Set("Authorization", "Bearer "+c.apiKey)
-	httpReq.Header.Set("Content-Type", "application/json")
-	if c.referer != "" {
-		// OpenRouter documents this exact header spelling; Go canonicalizes
-		// it to Http-Referer on the wire either way (headers are
-		// case-insensitive per RFC 9110).
-		httpReq.Header.Set("HTTP-Referer", c.referer) //nolint:canonicalheader // documented name
-	}
-	if c.title != "" {
-		httpReq.Header.Set("X-Title", c.title)
-	}
-
-	resp, err := c.httpClient.Do(httpReq)
-	if err != nil {
-		return nil, fmt.Errorf("calling openrouter: %w", err)
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return nil, parseAPIError(resp)
-	}
-
 	var imageResp ImageResponse
-	if decErr := json.NewDecoder(resp.Body).Decode(&imageResp); decErr != nil {
-		return nil, fmt.Errorf("decoding image response: %w", decErr)
+	if err := c.doJSON(ctx, http.MethodPost, "/images", req, &imageResp); err != nil {
+		return nil, err
 	}
 	return &imageResp, nil
-}
-
-// parseAPIError converts a non-2xx response into a *APIError, falling back
-// to the bare HTTP status when the body is not the documented error shape.
-func parseAPIError(resp *http.Response) error {
-	apiErr := &APIError{StatusCode: resp.StatusCode, Code: 0, Message: ""}
-	body, err := io.ReadAll(io.LimitReader(resp.Body, maxErrorBody))
-	if err != nil {
-		return apiErr
-	}
-	var eb errorBody
-	if jsonErr := json.Unmarshal(body, &eb); jsonErr == nil {
-		apiErr.Code = eb.Error.Code
-		apiErr.Message = eb.Error.Message
-	}
-	return apiErr
 }

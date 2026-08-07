@@ -7,10 +7,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 `orimage` — a Go CLI that calls the OpenRouter API to generate images and writes them to disk.
 Module path `github.com/schmitthub/openrouter-image-cli`, binary `orimage`.
 
-The scaffold was copied from an unrelated local CLI (`dv`, a Dependabot export viewer). The
-copy-paste has been cleaned up — imports, module path, build tooling, and command wiring are
-correct — but the project is still early: `generate` is a stub with no flags and no API client
-exists yet.
+Working commands: `generate` (image generation), `models list` / `models info`
+(model catalog), `version`.
 
 ## Commands
 
@@ -70,14 +68,17 @@ addressed by dotted json-tag paths (`"repo.owner.id"`), validated against the st
 against the set of keys actually present in the decoded source, so a typo'd path errors instead
 of silently matching zero values. `Set[T]` -> `.Query()` -> chained `.Where(path, op, value)`
 (immutable, returns a new `Query`) -> terminal `All`/`Count`/`CountBy`/`CountByNested`.
-Retained from the `dv` scaffold as the intended query engine for OpenRouter JSON responses;
-currently unused by any command.
+Intended as the query engine for OpenRouter JSON responses; currently unused by any command.
 
 **`internal/openrouter`** — hand-rolled OpenRouter API client (no SDK dep). `New(key, opts...)`
-/ `NewFromEnv()` (reads `OPENROUTER_API_KEY`); `GenerateImage(ctx, ImageRequest)` posts to
-`/images` and returns base64 payloads; non-2xx becomes `*APIError` (status/code/message).
-`WithBaseURL` exists for httptest servers. The Factory exposes it as a deferred
-`OpenRouter func() (*openrouter.Client, error)` so keyless commands (version, help) still run.
+/ `NewFromEnv()` (reads `OPENROUTER_API_KEY`); shared `doJSON`/`getJSON` helpers in `http.go`
+handle auth/attribution headers and error parsing; non-2xx becomes `*APIError`
+(status/code/message). Endpoints: `GenerateImage` (POST `/images`, base64 payloads),
+`ListImageModels` (GET `/images/models`), `GetImageModelEndpoints`
+(GET `/images/models/{id}/endpoints` — per-provider params + pricing; there is no bare
+`/images/models/{id}` resource). `WithBaseURL` exists for httptest servers. The Factory
+exposes the client as a deferred `OpenRouter func() (*openrouter.Client, error)` so keyless
+commands (version, help) still run.
 
 **`internal/build`** — `Version`/`Date`/`Revision` set via `-ldflags -X`, with a
 `debug.ReadBuildInfo()` fallback for `go install` builds.
@@ -128,9 +129,8 @@ Mirrors `schmitthub/clawker` (minus its embed/BPF machinery):
 
 - Streaming (`stream: true`, SSE partial images) is not implemented in
   `internal/openrouter`; neither is the `provider` routing object.
-- `internal/cmdutil/output.go`'s `JSONStringify(v, compact)` is unused; the root's
-  `--compact-output` persistent flag was removed with the `dv` command set. Re-add
-  `Factory.CompactOutput` if JSON output is wanted.
+- `models list/info --json` always pretty-print; there is no `--compact-output` flag.
+  Add `Factory.CompactOutput` if single-line JSON output is wanted.
 - Homebrew tap publishing is stubbed out in `.goreleaser.yaml` (commented `homebrew_casks`
   block) — needs a `schmitthub/homebrew-tap` repo and a `HOMEBREW_TAP_GITHUB_TOKEN` secret
   wired through `release.yml` -> `release-build.yml` before enabling.

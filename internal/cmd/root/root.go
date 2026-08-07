@@ -6,6 +6,7 @@ import (
 	"github.com/schmitthub/openrouter-image-cli/internal/cmdutil"
 
 	generateCmd "github.com/schmitthub/openrouter-image-cli/internal/cmd/generate"
+	modelsCmd "github.com/schmitthub/openrouter-image-cli/internal/cmd/models"
 	versionCmd "github.com/schmitthub/openrouter-image-cli/internal/cmd/version"
 )
 
@@ -31,6 +32,7 @@ func NewCmdRoot(f *cmdutil.Factory, version, buildDate string) (*cobra.Command, 
 
 	cmd.AddCommand(versionCmd.NewCmdVersion(f, version, buildDate))
 	cmd.AddCommand(generateCmd.NewCmdGenerate(f, nil))
+	cmd.AddCommand(modelsCmd.NewCmdModels(f))
 
 	return cmd, nil
 }
