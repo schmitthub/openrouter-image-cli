@@ -11,6 +11,16 @@ flags, compact JSON output, meaningful exit codes, images written straight to di
 ## Install
 
 ```sh
+curl -fsSL https://raw.githubusercontent.com/schmitthub/openrouter-image-cli/main/scripts/install.sh | sh
+```
+
+Installs the latest release to `/usr/local/bin` (checksum-verified; linux/darwin,
+amd64/arm64). Pin a version with `ORIMAGE_VERSION=v2026.8.3`, change the target with
+`ORIMAGE_INSTALL_DIR=~/bin`.
+
+Or with Go:
+
+```sh
 go install github.com/schmitthub/openrouter-image-cli/cmd/orimage@latest
 ```
 
