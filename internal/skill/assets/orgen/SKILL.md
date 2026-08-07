@@ -77,21 +77,39 @@ Failures exit non-zero with the error on stderr.
 
 ## Upgrading
 
-If a command fails in a way that suggests an outdated binary (an API
-rejection on a documented parameter, a flag `--help` says exists but
-the binary rejects), check `orgen version` against the latest release
-and upgrade:
+Suspect a stale binary when the API rejects something this skill or
+`--help` documents, or a documented flag is unknown to the binary.
+Confirm before upgrading: compare the installed version against the
+latest release —
 
 ```
-curl -fsSL https://raw.githubusercontent.com/schmitthub/openrouter-generate/main/scripts/install.sh | sh
+orgen version
+gh release view --repo schmitthub/openrouter-generate --json tagName -q .tagName
 ```
 
-This skill is embedded in the binary, so after upgrading re-install it
-to pick up the current copy (`--force` replaces the existing skill
-directory):
+(without `gh`: `curl -fsSL https://api.github.com/repos/schmitthub/openrouter-generate/releases/latest | grep tag_name`).
+
+If they differ, upgrade in place. The install script downloads the
+latest release binary and installs to `/usr/local/bin` by default
+(falling back to `~/.local/bin` when not writable); `ORGEN_INSTALL_DIR`
+overrides the target. To avoid ending up with two copies shadowing each
+other on PATH, install over the existing binary's directory:
+
+```
+ORGEN_INSTALL_DIR="$(dirname "$(command -v orgen)")" \
+  sh -c 'curl -fsSL https://raw.githubusercontent.com/schmitthub/openrouter-generate/main/scripts/install.sh | sh'
+```
+
+Then verify: `orgen version` must now report the new version. If it
+does not, `command -v orgen` is resolving a different copy — remove or
+upgrade that one too.
+
+Finally, this skill file itself is embedded in the binary and installed
+from it, so an upgraded binary may carry a newer skill. Refresh the
+installed copy by re-running skill install against the skills directory
+that contains this file (the parent of this `orgen/` directory);
+`--force` replaces the existing `orgen/` skill directory:
 
 ```
 orgen skill install --force <skills-directory>
 ```
-
-Point it at the directory this skill is installed in.
